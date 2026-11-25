@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: python-concept-experience
+    runtime: python
+    buildCommand: python --version
+    startCommand: python server.py
