@@ -82,3 +82,5 @@ body{background:radial-gradient(ellipse at 8% 0%,rgba(215,240,224,.58),transpare
 .topic-menu a{min-height:38px}
 .topic-menu a .topic-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
 @media(max-width:430px){.topic-menu{grid-template-columns:1fr;max-height:68vh}.topic-menu a .topic-name{display:block;white-space:normal}}
+
+.run-code{background:var(--green);border-color:var(--green);color:#fff;white-space:nowrap}.run-line{display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:#a4e6be}.run-line.error{color:#ff9b7d}
