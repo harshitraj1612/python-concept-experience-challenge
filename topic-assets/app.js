@@ -65,7 +65,7 @@
 
   const codeSource = topic.code.join('\n');
   $('code').innerHTML = topic.code.map((line, index) => `<div class="code-line" data-line="${index}"><span class="ln">${index + 1}</span><span class="src">${highlight(line)}</span></div>`).join('');
-  $('codeEditor').value = codeSource;
+  
 
   $('editToggle').addEventListener('click', () => {
     const editing = $('editorWrap').hidden;
@@ -77,7 +77,123 @@
   });
 
   $('resetCode').addEventListener('click', () => {
-    $('codeEditor').value = codeSource;
+    
+
+  const runButton = document.createElement('button');
+  runButton.type = 'button';
+  runButton.className = 'btn run-code';
+  runButton.id = 'runCode';
+  runButton.textContent = '▶ Run code';
+  runButton.title = 'Execute the edited Python example in your browser';
+  $('compile').insertAdjacentElement('afterend', runButton);
+
+  let activePythonWorker = null;
+  let pythonLoadTimer = null;
+  let pythonExecutionTimer = null;
+  let pythonOutput = [];
+
+  function clearPythonTimers() {
+    if (pythonLoadTimer !== null) { clearTimeout(pythonLoadTimer); pythonLoadTimer = null; }
+    if (pythonExecutionTimer !== null) { clearTimeout(pythonExecutionTimer); pythonExecutionTimer = null; }
+  }
+
+  function paintPythonOutput() {
+    $('console').innerHTML = '<span class="prompt">›</span>' + (pythonOutput.length
+      ? pythonOutput.map(line => '<span class="run-line' + (line.error ? ' error' : '') + '">' + esc(line.text) + '</span>').join('')
+      : '<span class="run-line">Running…</span>');
+  }
+
+  function stopPythonRun(message, isError = false) {
+    if (activePythonWorker) {
+      activePythonWorker.terminate();
+      activePythonWorker = null;
+    }
+    clearPythonTimers();
+    runButton.textContent = '▶ Run code';
+    if (message) {
+      pythonOutput.push({text: message, error: isError});
+      paintPythonOutput();
+    }
+  }
+
+  runButton.addEventListener('click', () => {
+    if (activePythonWorker) {
+      stopPythonRun('Execution stopped.');
+      $('compileStatus').textContent = 'Python run stopped.';
+      return;
+    }
+    const source = $('codeEditor').value;
+    if (!source.trim()) {
+      $('compileStatus').textContent = 'Enter Python code before running.';
+      $('compileStatus').classList.add('error');
+      return;
+    }
+    let stdin = '';
+    if (/\binput\s*\(/.test(source)) {
+      const supplied = window.prompt('This code calls input(). Enter its input values, one per line:');
+      if (supplied === null) return;
+      stdin = supplied;
+    }
+    if (!('Worker' in window)) {
+      $('compileStatus').textContent = 'This browser does not support the Python runner.';
+      $('compileStatus').classList.add('error');
+      return;
+    }
+
+    pause();
+    pythonOutput = [];
+    $('console').innerHTML = '<span class="prompt">›</span><span class="run-line">Loading Python runtime in your browser…</span>';
+    document.querySelector('.consolehead span:first-child').textContent = 'Python execution output';
+    $('counter').textContent = 'Loading';
+    $('compileStatus').textContent = 'Loading the browser Python runtime…';
+    $('compileStatus').classList.remove('error', 'success');
+    runButton.textContent = '■ Stop';
+    const worker = new Worker('topic-assets/python-worker.mjs', {type: 'module', name: 'loop-lab-python'});
+    activePythonWorker = worker;
+
+    const finish = (message, isError = false) => {
+      if (activePythonWorker !== worker) return;
+      if (message) pythonOutput.push({text: message, error: isError});
+      if (!pythonOutput.length) pythonOutput.push({text: 'Program finished without printed output.', error: false});
+      worker.terminate();
+      activePythonWorker = null;
+      clearPythonTimers();
+      runButton.textContent = '▶ Run code';
+      $('counter').textContent = 'Finished';
+      $('compileStatus').textContent = isError ? 'Python run ended with an error.' : 'Python code executed in your browser.';
+      $('compileStatus').classList.toggle('error', isError);
+      paintPythonOutput();
+    };
+
+    worker.onmessage = event => {
+      const result = event.data || {};
+      if (result.type === 'ready') {
+        if (pythonLoadTimer !== null) { clearTimeout(pythonLoadTimer); pythonLoadTimer = null; }
+        $('compileStatus').textContent = 'Running your Python code…';
+        $('counter').textContent = 'Running';
+        pythonExecutionTimer = setTimeout(() => {
+          finish('Stopped after 7 seconds. Check for a long-running or infinite loop.', true);
+        }, 7000);
+        worker.postMessage({type: 'run', code: source, stdin});
+      } else if (result.type === 'stdout' || result.type === 'stderr') {
+        pythonOutput.push({text: result.text || '', error: result.type === 'stderr'});
+        paintPythonOutput();
+      } else if (result.type === 'done') {
+        finish('', false);
+      } else if (result.type === 'error') {
+        finish(result.text || 'Python could not run this code.', true);
+      } else if (result.type === 'load-error') {
+        finish('Python runtime could not load: ' + (result.text || 'check your connection and try again.'), true);
+      }
+    };
+    worker.onerror = event => {
+      finish('Runner error: ' + (event.message || 'The Python worker failed to start.'), true);
+    };
+    pythonLoadTimer = setTimeout(() => {
+      finish('Python runtime did not load within 45 seconds. Check your connection and try again.', true);
+    }, 45000);
+  });
+
     $('compileStatus').textContent = 'Example restored. Compile when ready.';
     $('compileStatus').classList.remove('error', 'success');
   });
@@ -244,4 +360,31 @@
   }));
 
   render();
+  const runButton = document.createElement('button');
+  runButton.type = 'button';
+  runButton.className = 'btn run-code';
+  runButton.textContent = '▶ Run code';
+  $('compile').insertAdjacentElement('afterend', runButton);
+  let activePythonWorker = null;
+  let pythonLoadTimer = null;
+  let pythonExecutionTimer = null;
+  let pythonOutput = [];
+  const clearPythonTimers = () => { clearTimeout(pythonLoadTimer); clearTimeout(pythonExecutionTimer); };
+  const paintPythonOutput = () => { $('console').innerHTML = '<span class="prompt">›</span>' + (pythonOutput.length ? pythonOutput.map(line => '<span class="run-line' + (line.error ? ' error' : '') + '">' + esc(line.text) + '</span>').join('') : '<span class="run-line">Running…</span>'); };
+  runButton.addEventListener('click', () => {
+    if (activePythonWorker) { activePythonWorker.terminate(); activePythonWorker = null; clearPythonTimers(); runButton.textContent = '▶ Run code'; pythonOutput.push({text:'Execution stopped.'}); paintPythonOutput(); return; }
+    const source = $('codeEditor').value;
+    if (!source.trim()) return;
+    let stdin = '';
+    if (/\binput\s*\(/.test(source)) { const supplied = window.prompt('Enter input values, one per line:'); if (supplied === null) return; stdin = supplied; }
+    pythonOutput = [];
+    $('console').innerHTML = '<span class="prompt">›</span><span class="run-line">Loading Python runtime…</span>';
+    runButton.textContent = '■ Stop';
+    const worker = new Worker('topic-assets/python-worker.mjs', {type:'module'});
+    activePythonWorker = worker;
+    const finish = (message, error=false) => { if (activePythonWorker !== worker) return; if (message) pythonOutput.push({text:message,error}); if (!pythonOutput.length) pythonOutput.push({text:'Program finished without printed output.'}); worker.terminate(); activePythonWorker = null; clearPythonTimers(); runButton.textContent='▶ Run code'; paintPythonOutput(); };
+    worker.onmessage = event => { const result=event.data||{}; if (result.type==='ready') { clearTimeout(pythonLoadTimer); pythonExecutionTimer=setTimeout(()=>finish('Stopped after 7 seconds (possible infinite loop).',true),7000); worker.postMessage({type:'run',code:source,stdin}); } else if (result.type==='stdout'||result.type==='stderr') { pythonOutput.push({text:result.text||'',error:result.type==='stderr'}); paintPythonOutput(); } else if (result.type==='done') finish(''); else if (result.type==='error'||result.type==='load-error') finish(result.text||'Python could not run.',true); };
+    worker.onerror = event => finish(event.message||'Python worker failed.',true);
+    pythonLoadTimer=setTimeout(()=>finish('Python runtime did not load. Check your connection.',true),45000);
+  });
 })();
