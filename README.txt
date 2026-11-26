@@ -1,3 +1,8 @@
+
+HARSHIT RAJ :- 26MNC10
+
+
+
 Python Concept-to-Experience Challenge
 
 Open index.html to start on Topic 09 (Loops in Python). Use “Switch topic” in the top-right corner to move among all 25 topic pages. Each page includes an explanation, a visual step simulator, code-line highlighting, Next/Back/Play/Pause/Reset controls, a speed slider, output, a quick check, editable starter code, and a Python Compile button.
