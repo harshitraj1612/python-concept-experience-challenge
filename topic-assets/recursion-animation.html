@@ -1,0 +1,754 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Recursion Animation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a video-style player with Loopy the robot teacher in the subtitle bar, a dark animated stage, scene pills below. */
+:root {
+  --bg: #0e1a26; --panel: #162636; --panel2: #1c3145; --line: #2b4660;
+  --fg: #eef4f8; --muted: #9bb2c3;
+  --amber: #ffb42e; --mint: #3fe0a0; --coral: #ff6e6e; --sky: #5db4ff; --violet: #b78bff;
+  --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  background-image: radial-gradient(900px 500px at 15% -10%, rgba(93,180,255,.16), transparent 60%), radial-gradient(800px 500px at 95% 10%, rgba(183,139,255,.14), transparent 60%);
+  padding-block: 20px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+#fx, #conf { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+#fx { z-index: 0; }
+#conf { z-index: 50; }
+.fl { position: absolute; bottom: 0; font-family: var(--mono); font-weight: 700; color: var(--sky); opacity: 0; animation: floatUp linear infinite; }
+@keyframes floatUp { 0% { transform: translateY(0) rotate(0); opacity: 0; } 12% { opacity: .22; } 88% { opacity: .22; } 100% { transform: translateY(-110vh) rotate(35deg); opacity: 0; } }
+.cf { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 2px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translate3d(var(--dx), 110vh, 0) rotate(720deg); } }
+
+.wrap { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand { display:flex; align-items:center; gap:8px; font: 800 24px var(--display); color: var(--amber); text-shadow: 0 0 18px rgba(255,180,46,.45); text-decoration:none; }
+.brand svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.topic { color: var(--muted); font-weight: 700; letter-spacing: .04em; }
+
+.player { display: flex; flex-direction: column; min-width: 0; }
+.stagewrap { position: relative; }
+.stage {
+  background: linear-gradient(135deg, #162636, #1b3550, #1a2a45, #162636); background-size: 300% 300%; animation: bgshift 16s ease infinite;
+  border: 1px solid var(--line); border-radius: 18px 18px 0 0;
+  padding: clamp(16px, 3vw, 32px); min-height: clamp(400px, 54vw, 560px);
+  display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+@keyframes bgshift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.start { position: absolute; inset: 0; z-index: 5; background: rgba(9,18,27,.9); border-radius: 18px 18px 0 0; display: grid; place-items: center; text-align: center; padding: 20px; }
+.start .in { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.start h2 { margin: 0; font: 800 clamp(26px, 5vw, 44px) var(--display); }
+.start p { margin: 0; color: var(--muted); font-weight: 700; max-width: 440px; }
+.btn.big { font-size: 20px; padding: 14px 30px; border-radius: 14px; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,180,46,.55); } 50% { box-shadow: 0 0 0 16px rgba(255,180,46,0); } }
+
+.capbar { background: #09121b; border: 1px solid var(--line); border-top: none; padding: 10px 18px; display: flex; gap: 14px; align-items: center; min-height: 6em; }
+#mas { flex: none; }
+#mas svg { width: 56px; height: auto; display: block; }
+.cap { flex: 1; min-width: 0; text-align: center; font: 700 clamp(17px, 2.6vw, 24px)/1.35 var(--body); text-wrap: balance; }
+.cap.pop { animation: enter .4s var(--spring) both; }
+.bar { height: 6px; background: var(--panel2); }
+.fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--amber), var(--mint)); transition: width .5s ease; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 12px; }
+.controls .lab { margin-left: auto; color: var(--muted); font-weight: 700; font-size: 14px; }
+.btn { background: var(--panel2); border: 1px solid var(--line); color: var(--fg); border-radius: 10px; padding: 9px 14px; font: 800 14px var(--body); cursor: pointer; text-decoration: none; display: inline-block; }
+.btn:hover { border-color: var(--amber); }
+.btn.primary { background: var(--amber); border-color: var(--amber); color: #1a1200; }
+.btn[aria-pressed="false"] { opacity: .55; text-decoration: line-through; }
+.btn:focus-visible, .dot:focus-visible, .opt:focus-visible, a:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+.dots { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
+.dot { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 6px 12px; font: 700 13px var(--body); cursor: pointer; display: inline-flex; gap: 6px; }
+.dot .n { color: var(--amber); }
+.dot.seen { color: var(--fg); }
+.dot.active { border-color: var(--amber); color: var(--amber); background: rgba(255,180,46,.1); }
+@media (max-width: 640px) { .dot span:not(.n) { display: none; } }
+.foot { color: var(--muted); font-size: 14px; }
+.foot a { color: var(--sky); }
+
+/* mascot */
+.mfloat { animation: mfloat 3s ease-in-out infinite; }
+@keyframes mfloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.meyes { transform-origin: 60px 60px; animation: blink 4.5s infinite; }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+.mant { animation: ant 1.2s ease-in-out infinite; }
+@keyframes ant { 50% { fill: #ffb42e; } }
+.mmouth { transform-origin: 60px 81px; }
+svg.talk .mmouth { animation: talk .26s ease-in-out infinite; }
+@keyframes talk { 50% { transform: scaleY(2.4); } }
+.mascot.big { width: clamp(110px, 18vw, 160px); height: auto; }
+
+/* scenes */
+.scene { width: 100%; display: flex; flex-direction: column; gap: 18px; align-items: center; justify-content: center; animation: enter .5s var(--spring) both; }
+.scene.two { flex-direction: row; align-items: center; gap: 22px; }
+.col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+@media (max-width: 720px) { .scene.two { flex-direction: column; align-items: stretch; } }
+@keyframes enter { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+.hid { opacity: 0; transform: scale(.7) translateY(10px); }
+.line, .console, .nb, .card, .codebox, .opt, .st, .chip, .fin, .note, .stp, .bl, .tk, .cond { transition: opacity .4s, transform .5s var(--spring), background .25s, border-color .25s, color .25s, box-shadow .3s; }
+
+.s-title { text-align: center; }
+h1 { margin: 0; font: 800 clamp(36px, 7vw, 68px)/1.05 var(--display); text-wrap: balance; background: linear-gradient(90deg, var(--amber), #ff8fb1, var(--sky)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { margin: 0; color: var(--muted); font-size: clamp(16px, 2.4vw, 22px); font-weight: 700; }
+.tags { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.tags span { font: 700 15px var(--mono); padding: 6px 14px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); color: var(--sky); animation: enter .6s var(--spring) both; }
+.tags span:nth-child(2) { animation-delay: .15s; } .tags span:nth-child(3) { animation-delay: .3s; } .tags span:nth-child(4) { animation-delay: .45s; }
+
+.tag { font: 800 13px var(--body); letter-spacing: .14em; text-transform: uppercase; }
+.tag.bad { color: var(--coral); } .tag.good { color: var(--mint); }
+
+.codebox { background: #0a141d; border: 1px solid var(--line); border-radius: 12px; padding: 12px 0; overflow-x: auto; font-family: var(--mono); font-size: clamp(13px, 1.9vw, 18px); font-variant-numeric: tabular-nums; }
+.scene:not(.two) .codebox { width: 100%; max-width: 440px; }
+.line { white-space: pre; padding: 3px 16px; border-left: 4px solid transparent; }
+.line.on { background: rgba(255,180,46,.18); border-left-color: var(--amber); box-shadow: inset 0 0 20px rgba(255,180,46,.12); }
+.kw { color: #ff8fb1; } .str { color: var(--mint); } .num { color: var(--sky); } .fn { color: #c9a8ff; }
+
+.console { background: #050b11; border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; font-family: var(--mono); min-height: 110px; font-size: clamp(14px, 2vw, 18px); }
+.console .hd { color: var(--muted); font: 800 12px var(--body); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px; }
+.o { color: var(--mint); animation: enter .35s var(--spring) both; text-shadow: 0 0 10px rgba(63,224,160,.5); }
+
+.statebox { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; flex: 1; min-width: 0; }
+.lbl { color: var(--muted); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 13px; }
+.val { font: 800 clamp(26px, 4.6vw, 44px) var(--display); color: var(--amber); }
+.val.bump { animation: bump .5s var(--spring); }
+@keyframes bump { 0% { transform: scale(.4); } 100% { transform: scale(1); } }
+
+.track { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.st { width: clamp(52px, 9vw, 76px); aspect-ratio: 1; border-radius: 50%; border: 3px dashed var(--line); display: grid; place-items: center; font: 800 26px var(--display); color: var(--muted); }
+.st.act { border-style: solid; border-color: var(--amber); background: var(--amber); color: #1a1200; transform: scale(1.14); box-shadow: 0 0 26px rgba(255,180,46,.6); animation: hop .55s var(--spring); }
+@keyframes hop { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-20px) scale(1.14); } 100% { transform: translateY(0) scale(1.14); } }
+.st.done { border-style: solid; border-color: var(--mint); color: var(--mint); }
+
+.stairs { display: flex; align-items: flex-end; gap: 6px; height: 200px; margin-top: 34px; }
+.stp { position: relative; width: clamp(48px, 10vw, 84px); background: linear-gradient(#3a7cc0, #1d4a73); border-radius: 8px 8px 0 0; display: flex; align-items: flex-end; justify-content: center; font: 800 22px var(--display); padding-bottom: 6px; color: #cfe8ff; }
+.ballw { position: absolute; bottom: 100%; left: 0; right: 0; display: flex; justify-content: center; padding-bottom: 4px; }
+.bl { width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #ffe3a0, #ff9d00); box-shadow: 0 0 16px rgba(255,180,46,.8); }
+.bl:not(.hid) { animation: ballhop .7s var(--spring); }
+@keyframes ballhop { 0% { transform: translateY(-60px) scale(.6); } 60% { transform: translateY(0) scale(1.15, .8); } 100% { transform: none; } }
+
+.pill { font: 700 clamp(20px, 4vw, 34px) var(--mono); padding: 8px 22px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); color: var(--amber); }
+.numrow { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; row-gap: 30px; }
+.nb { width: clamp(52px, 10vw, 84px); aspect-ratio: 1; border-radius: 14px; display: grid; place-items: center; font: 800 clamp(26px, 5vw, 40px) var(--display); background: var(--panel2); border: 2px solid var(--sky); color: var(--sky); }
+.nb.cur { background: var(--sky); color: #06223b; box-shadow: 0 0 26px rgba(93,180,255,.7); transform: translateY(-8px) scale(1.1); }
+.nb.ghost { border-style: dashed; border-color: var(--coral); color: var(--coral); background: transparent; }
+.note { color: var(--muted); font-weight: 700; text-align: center; }
+
+.big { font: 700 clamp(22px, 4.4vw, 44px)/2.5 var(--mono); background: #0a141d; border: 1px solid var(--line); border-radius: 16px; padding: 14px clamp(14px, 3vw, 34px) 44px; max-width: 100%; overflow-x: auto; }
+.big .l2 { white-space: pre; }
+.tk { position: relative; display: inline-block; padding: 0 4px; border-radius: 8px; }
+.tk.on { background: rgba(255,180,46,.22); box-shadow: 0 0 0 2px var(--amber), 0 0 24px rgba(255,180,46,.45); transform: translateY(-3px) scale(1.07); }
+.tk.dim { opacity: .3; }
+.tk::after { content: attr(data-l); position: absolute; left: 50%; top: calc(100% - 6px); transform: translateX(-50%) scale(.5); opacity: 0; white-space: nowrap; font: 800 clamp(12px, 1.8vw, 16px)/1.4 var(--body); background: var(--amber); color: #1a1200; border-radius: 8px; padding: 0 10px; transition: opacity .3s, transform .4s var(--spring); z-index: 2; pointer-events: none; }
+.tk.on::after { opacity: 1; transform: translateX(-50%) scale(1); }
+
+.chip { width: clamp(44px, 8vw, 64px); aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; font: 800 26px var(--display); background: var(--panel2); border: 2px solid var(--line); position: relative; }
+.chip.cur { border-color: var(--amber); transform: translateY(-8px) scale(1.1); box-shadow: 0 0 20px rgba(255,180,46,.5); }
+.chip.ok { background: rgba(63,224,160,.18); border-color: var(--mint); color: var(--mint); }
+.chip.skip { background: rgba(255,180,46,.18); border-color: var(--amber); color: var(--amber); animation: wob .6s; }
+.chip.stop { background: rgba(255,110,110,.2); border-color: var(--coral); color: var(--coral); animation: shake .5s; }
+.chip.dim { opacity: .3; }
+@keyframes wob { 30% { transform: rotate(-12deg); } 60% { transform: rotate(10deg); } }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+.chip[data-tag]::after { content: attr(data-tag); position: absolute; top: 100%; margin-top: 4px; font: 800 12px var(--body); white-space: nowrap; }
+
+.vis { display: flex; gap: 16px; align-items: flex-end; }
+.glass { position: relative; width: 110px; height: 150px; flex: none; border: 4px solid var(--sky); border-top: none; border-radius: 0 0 24px 24px; overflow: hidden; background: rgba(93,180,255,.06); }
+.water { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(#7cc4ff, #3a8fe0); transition: height .9s ease; }
+.water::before { content: ""; position: absolute; left: -10%; right: -10%; top: -8px; height: 16px; border-radius: 50%; background: #9bd3ff; animation: wave 1.6s ease-in-out infinite alternate; }
+@keyframes wave { to { transform: translateX(8%); } }
+.cond { font: 700 clamp(18px, 3vw, 26px) var(--mono); padding: 10px 16px; border-radius: 12px; background: var(--panel2); border: 2px solid var(--line); display: inline-flex; gap: 12px; align-items: center; align-self: flex-start; color: var(--muted); }
+.cond .yes { color: var(--mint); } .cond .no { color: var(--coral); }
+.cond[data-s="yes"] { border-color: var(--mint); box-shadow: 0 0 24px rgba(63,224,160,.4); }
+.cond[data-s="no"] { border-color: var(--coral); box-shadow: 0 0 24px rgba(255,110,110,.4); }
+
+.q { font: 800 clamp(22px, 4vw, 34px)/1.2 var(--display); text-align: center; text-wrap: balance; }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 640px; }
+@media (max-width: 560px) { .opts { grid-template-columns: 1fr; } }
+.opt { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--panel2); border: 2px solid var(--line); color: var(--fg); font: 700 18px var(--body); cursor: pointer; text-align: left; }
+.opt b { color: var(--amber); }
+.opt .mono { font-family: var(--mono); }
+.opt:hover:not(:disabled) { border-color: var(--amber); transform: translateY(-3px); }
+.opt.right { border-color: var(--mint); background: rgba(63,224,160,.16); animation: bump .5s var(--spring); }
+.opt.wrong { border-color: var(--coral); background: rgba(255,110,110,.16); animation: shake .5s; }
+.fb { min-height: 1.5em; font-weight: 700; color: var(--muted); text-align: center; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; width: 100%; }
+.card { background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { margin: 0; font: 800 24px var(--display); color: var(--amber); }
+.card p { margin: 0; }
+.card code { font-family: var(--mono); color: var(--sky); font-size: 15px; }
+.fin { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.fin strong { font: 800 clamp(22px, 4vw, 32px) var(--display); }
+
+.player:fullscreen { background: var(--bg); justify-content: center; padding: 16px; }
+.player:fullscreen .stage { min-height: 62vh; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* recursion additions */
+.nest { border: 3px solid var(--sky); border-radius: 16px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; width: 100%; background: rgba(93,180,255,.08); transition: opacity .4s, transform .5s var(--spring); }
+.nest.a { max-width: 480px; }
+.nest.b { border-color: var(--violet); background: rgba(183,139,255,.1); }
+.nest.c { border-color: var(--mint); background: rgba(63,224,160,.1); }
+.nl { font: 800 14px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.gift { font: 800 clamp(22px, 4vw, 34px) var(--display); color: var(--amber); text-align: center; text-shadow: 0 0 20px rgba(255,180,46,.7); }
+.rowx { font: 700 clamp(16px, 3vw, 26px) var(--mono); background: #0a141d; border: 1px solid var(--line); border-radius: 12px; padding: 10px 18px; width: 100%; max-width: 520px; transition: opacity .4s, transform .5s var(--spring); }
+.rowx.base { border-color: var(--mint); box-shadow: 0 0 20px rgba(63,224,160,.3); }
+.stack { display: flex; flex-direction: column-reverse; justify-content: flex-start; gap: 8px; min-height: 220px; width: 100%; }
+.fr { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: baseline; background: var(--panel2); border: 2px solid var(--sky); border-radius: 12px; padding: 8px 14px; font-family: var(--mono); font-size: clamp(14px, 2vw, 18px); animation: drop .5s var(--spring); transition: border-color .3s, box-shadow .3s; }
+.fr b { color: var(--amber); }
+.fr .fs { color: var(--muted); }
+.fr .rv { color: var(--mint); font-weight: 700; }
+.fr.done { border-color: var(--mint); }
+.fr.base { border-color: var(--coral); box-shadow: 0 0 18px rgba(255,110,110,.35); }
+.fr.gone { animation: leave .45s ease forwards; }
+@keyframes drop { from { opacity: 0; transform: translateY(-40px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes leave { to { opacity: 0; transform: translateX(50px) scale(.8); } }
+.cond[data-s="warn"] { border-color: var(--amber); box-shadow: 0 0 24px rgba(255,180,46,.4); color: var(--amber); }
+.cond { white-space: normal; }
+</style>
+
+<div id="fx" aria-hidden="true"></div>
+<div id="conf" aria-hidden="true"></div>
+<main class="wrap">
+  <header class="top">
+    <a class="brand" href="../index.html"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></svg> loop lab</a>
+    <span class="topic">Recursion in Python</span>
+  </header>
+
+  <section class="player" id="player" aria-label="Recursion in Python animation">
+    <div class="stagewrap">
+      <div class="stage" id="stage"></div>
+      <div class="start" id="start">
+        <div class="in">
+          <div id="startmas"></div>
+          <h2>Recursion seekhte hain, Loopy ke saath</h2>
+          <p>Beginner ke liye step-by-step animation. Awaaz aur sound ke liye volume on rakhna.</p>
+          <button class="btn primary big" id="go" type="button">▶ Shuru karo</button>
+        </div>
+      </div>
+    </div>
+    <div class="capbar"><div id="mas"></div><div class="cap" id="cap" aria-live="polite">Shuru karne ke liye play dabao.</div></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="controls">
+      <button class="btn" id="prev" type="button">← Peeche</button>
+      <button class="btn primary" id="play" type="button">Play</button>
+      <button class="btn" id="next" type="button">Aage →</button>
+      <button class="btn" id="speed" type="button" title="Speed badlo">1×</button>
+      <button class="btn" id="tvoice" type="button" aria-pressed="true">Voice</button>
+      <button class="btn" id="tsfx" type="button" aria-pressed="true">Sound</button>
+      <button class="btn" id="tmus" type="button" aria-pressed="true">Music</button>
+      <button class="btn" id="full" type="button">Full screen</button>
+      <span class="lab" id="lab"></span>
+    </div>
+    <nav class="dots" id="dots" aria-label="Scenes"></nav>
+  </section>
+
+  <p class="foot">Shortcut: Space se play/pause, left aur right arrow se scene badlo. Hindi voice na mile to subtitles padhte raho. Khud try karne ke liye <a href="https://python-concept-experience-challenge.vercel.app/" target="_blank" rel="noopener">Loop Lab</a> kholo.</p>
+</main>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var $$ = function (s) { return document.querySelectorAll(s); };
+  var esc = function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var syn = function (s) {
+    return esc(s).replace(/("[^"]*")|\b(for|in|while|if|continue|break)\b|\b(print|range)\b|\b(\d+)\b/g, function (m, a, b, c, d) {
+      return a ? '<span class="str">' + a + '</span>' : b ? '<span class="kw">' + b + '</span>' : c ? '<span class="fn">' + c + '</span>' : '<span class="num">' + d + '</span>';
+    });
+  };
+  var code = function (id, lines, hid) {
+    return '<div class="codebox" id="' + id + '">' + lines.map(function (l) {
+      return '<div class="line' + (hid ? ' hid' : '') + '">' + syn(l) + '</div>';
+    }).join('') + '</div>';
+  };
+  var show = function (sel) { $$(sel).forEach(function (e) { e.classList.remove('hid'); }); };
+  var hl = function (id, i) { $$('#' + id + ' .line').forEach(function (l, k) { l.classList.toggle('on', k === i); }); };
+  var out = function (id, t) { var d = document.createElement('div'); d.className = 'o'; d.textContent = t; $('#' + id).appendChild(d); };
+  var range = function (n) { var a = []; for (var i = 0; i < n; i++) a.push(i); return a; };
+  var bump = function (el, t) { el.textContent = t; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); };
+
+  var opts = { voice: true, sfx: true, music: true };
+  var st = { i: 0, idx: 0, rem: 0, hold: false, playing: false, started: false, ended: false, speaking: false, speed: 1, utt: 0 };
+  var seen = {};
+
+  /* ---------- mascot ---------- */
+  var mascot = function (cls) {
+    return '<svg class="mascot ' + (cls || '') + '" viewBox="0 0 120 140" aria-hidden="true"><g class="mfloat">' +
+      '<line x1="60" y1="30" x2="60" y2="16" stroke="#ffb42e" stroke-width="4" stroke-linecap="round"/><circle class="mant" cx="60" cy="10" r="7" fill="#ff6e6e"/>' +
+      '<rect x="18" y="30" width="84" height="64" rx="26" fill="#27476a" stroke="#5db4ff" stroke-width="4"/>' +
+      '<g class="meyes"><ellipse cx="44" cy="60" rx="9" ry="10" fill="#fff"/><ellipse cx="76" cy="60" rx="9" ry="10" fill="#fff"/><circle cx="46" cy="62" r="4.5" fill="#0e1a26"/><circle cx="78" cy="62" r="4.5" fill="#0e1a26"/></g>' +
+      '<rect class="mmouth" x="48" y="78" width="24" height="7" rx="3.5" fill="#ffb42e"/>' +
+      '<rect x="32" y="98" width="56" height="30" rx="14" fill="#1c3145" stroke="#5db4ff" stroke-width="3"/>' +
+      '<text x="60" y="121" text-anchor="middle" font-size="20" font-weight="800" fill="#ffb42e" font-family="Baloo 2, sans-serif">↻</text></g></svg>';
+  };
+  $('#mas').innerHTML = mascot('');
+  $('#startmas').innerHTML = mascot('big');
+
+  /* ---------- background symbols + confetti ---------- */
+  (function () {
+    var words = ['def', 'return', 'fact(3)', 'n-1', 'base', 'stack', '1', '2', '3', '↻', 'n * f()', '6'];
+    var box = $('#fx');
+    for (var k = 0; k < 16; k++) {
+      var s = document.createElement('span');
+      s.className = 'fl'; s.textContent = words[k % words.length];
+      s.style.left = (Math.random() * 96) + '%';
+      s.style.fontSize = (14 + Math.random() * 22) + 'px';
+      s.style.animationDuration = (16 + Math.random() * 18) + 's';
+      s.style.animationDelay = (-Math.random() * 30) + 's';
+      box.appendChild(s);
+    }
+  })();
+  var confetti = function (n) {
+    var box = $('#conf'), cols = ['#ffb42e', '#3fe0a0', '#ff6e6e', '#5db4ff', '#b78bff', '#ff8fb1'];
+    for (var k = 0; k < n; k++) {
+      var d = document.createElement('div');
+      d.className = 'cf';
+      d.style.left = (Math.random() * 100) + '%';
+      d.style.background = cols[k % cols.length];
+      d.style.setProperty('--dx', ((Math.random() - .5) * 240) + 'px');
+      d.style.animationDuration = (1.8 + Math.random() * 1.8) + 's';
+      d.style.animationDelay = (Math.random() * .5) + 's';
+      box.appendChild(d);
+      (function (e) { setTimeout(function () { if (e.parentNode) e.parentNode.removeChild(e); }, 4500); })(d);
+    }
+  };
+
+  /* ---------- audio ---------- */
+  var ac = null, master = null;
+  var initAudio = function () {
+    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    try {
+      var C = window.AudioContext || window.webkitAudioContext;
+      ac = new C(); master = ac.createGain(); master.gain.value = .9; master.connect(ac.destination);
+    } catch (e) { ac = null; }
+  };
+  var tone = function (f, d, type, v, delay, f2, force) {
+    if (!ac || !(opts.sfx || force)) return;
+    var t = ac.currentTime + (delay || 0), o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(v || .15, t + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .03);
+  };
+  var noise = function (d, f0, f1, v) {
+    if (!ac || !opts.sfx) return;
+    var n = Math.floor(ac.sampleRate * d), b = ac.createBuffer(1, n, ac.sampleRate), data = b.getChannelData(0);
+    for (var k = 0; k < n; k++) data[k] = Math.random() * 2 - 1;
+    var s = ac.createBufferSource(); s.buffer = b;
+    var f = ac.createBiquadFilter(); f.type = 'bandpass';
+    var t = ac.currentTime;
+    f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + d);
+    var g = ac.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t);
+  };
+  var fx = {
+    pop: function () { tone(520, .09, 'sine', .14, 0, 880); },
+    tick: function (n) { tone(380 + (n || 0) * 70, .12, 'triangle', .17); },
+    ding: function (n) { tone(880 + (n || 0) * 110, .35, 'sine', .13); tone(1320 + (n || 0) * 165, .3, 'sine', .06, .03); },
+    whoosh: function () { noise(.35, 300, 2400, .08); },
+    success: function () { [523, 659, 784, 1047].forEach(function (f, k) { tone(f, .3, 'triangle', .14, k * .11); }); },
+    wrong: function () { tone(220, .4, 'sawtooth', .09, 0, 110); },
+    splash: function () { tone(320, .25, 'sine', .12, 0, 720); tone(480, .2, 'sine', .08, .08, 900); },
+    boing: function () { tone(260, .32, 'sine', .15, 0, 560); },
+    thud: function () { tone(150, .28, 'sine', .22, 0, 55); noise(.12, 500, 120, .06); },
+    hello: function () { [392, 523, 659, 784].forEach(function (f, k) { tone(f, .22, 'triangle', .12, k * .09); }); }
+  };
+  var mus = null, mstep = 0;
+  var scale = [261.63, 293.66, 329.63, 392, 440, 523.25, 587.33];
+  var seq = [0, 2, 4, 2, 5, 4, 2, 1];
+  var musicStart = function () {
+    if (mus || !ac) return;
+    mus = setInterval(function () {
+      if (!opts.music || !st.playing) return;
+      var f = scale[seq[mstep % 8]];
+      tone(f, .55, 'sine', .022, 0, 0, true);
+      if (mstep % 4 === 0) tone(f / 2, 1, 'sine', .03, 0, 0, true);
+      mstep++;
+    }, 480);
+  };
+
+  /* ---------- voice ---------- */
+  var voices = [];
+  var loadVoices = function () { try { voices = window.speechSynthesis ? speechSynthesis.getVoices() : []; } catch (e) { voices = []; } };
+  if (window.speechSynthesis) { loadVoices(); try { speechSynthesis.onvoiceschanged = loadVoices; } catch (e) {} }
+  var talkT = null;
+  var talk = function (on) { var m = $('#mas svg'); if (m) m.classList.toggle('talk', on); };
+  var stopSpeech = function () {
+    st.utt++; st.speaking = false;
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+    clearTimeout(talkT); talk(false);
+  };
+  var speak = function (roman, dev) {
+    stopSpeech();
+    if (!opts.voice || !window.speechSynthesis || !st.playing) return false;
+    var hi = null, en = null;
+    voices.forEach(function (v) {
+      if (!hi && /^hi/i.test(v.lang)) hi = v;
+      if (!en && /^en[-_]IN/i.test(v.lang)) en = v;
+    });
+    var text, voice = null, lang;
+    if (hi) { text = dev; voice = hi; lang = hi.lang; }
+    else if (voices.length) { text = roman; voice = en; lang = en ? en.lang : 'en-IN'; }
+    else { text = dev; lang = 'hi-IN'; }
+    var u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.lang = lang;
+    u.rate = Math.min(1.5, .95 * st.speed); u.pitch = 1.1;
+    var token = ++st.utt;
+    var done = function () {
+      if (token !== st.utt) return;
+      st.speaking = false; st.rem = Math.min(st.rem, 450); talk(false);
+    };
+    u.onend = done; u.onerror = done;
+    st.speaking = true;
+    setTimeout(function () { if (token === st.utt && st.speaking) done(); }, 16000);
+    try { speechSynthesis.speak(u); } catch (e) { st.speaking = false; return false; }
+    return true;
+  };
+  var cap = function (r, d) {
+    var c = $('#cap');
+    c.textContent = r; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+    clearTimeout(talkT); talk(true);
+    var sp = speak(r, d || r);
+    if (!sp) talkT = setTimeout(function () { talk(false); }, Math.min(5000, 700 + r.length * 55));
+  };
+
+  /* step helpers: T = spoken step, A = silent visual step */
+  var T = function (r, d, fn, w) {
+    return [function () { cap(r, d); if (fn) fn(); }, w || Math.max(2000, r.length * 45)];
+  };
+  var A = function (fn, w) { return [fn, w || 700]; };
+
+  /* ---------- scene helpers ---------- */
+  var focusTk = function (id) {
+    $$('.big .tk').forEach(function (e) { var on = e.id === id; e.classList.toggle('on', on); e.classList.toggle('dim', !!id && !on); });
+  };
+  var nbCur = function (k) { $$('#nr .nb').forEach(function (e, j) { e.classList.toggle('cur', j === k); }); };
+  var stn = function (k) { $$('#tr3 .st').forEach(function (s, j) { s.classList.toggle('act', j === k); s.classList.toggle('done', j < k); }); };
+  var setW = function (w) { bump($('#v4'), w); $('#w4').style.height = (w / 3 * 100) + '%'; fx.splash(); };
+  var cond = function (w) {
+    var ok = w < 3, c = $('#cd4');
+    c.innerHTML = w + ' &lt; 3 ? <span class="' + (ok ? 'yes' : 'no') + '">' + (ok ? 'HAAN' : 'NAHI') + '</span>';
+    c.setAttribute('data-s', ok ? 'yes' : 'no');
+  };
+  var chip = function (k, cls, tag) {
+    var els = $$('#ch5 .chip');
+    els.forEach(function (e) { e.classList.remove('cur'); });
+    var e = els[k - 1]; e.classList.add(cls);
+    if (tag) e.setAttribute('data-tag', tag);
+  };
+
+  var quiz = function (title, lines, choices, right, okR, okD, badR, badD, askR, askD) {
+    return {
+      title: title, hold: true,
+      html: function () {
+        return '<div class="scene"><div class="q">Quick check: ye code kya print karega?</div>' + code('cq', lines) +
+          '<div class="opts" id="op">' + choices.map(function (t, j) {
+            return '<button class="opt" type="button" data-k="' + j + '"><b>' + 'ABC'.charAt(j) + '</b><span class="mono">' + esc(t) + '</span></button>';
+          }).join('') + '</div><div class="fb" id="fb"></div></div>';
+      },
+      init: function () {
+        $$('#op .opt').forEach(function (b) {
+          b.onclick = function () {
+            var k = +b.getAttribute('data-k'), o = $$('#op .opt');
+            o.forEach(function (x) { x.disabled = true; });
+            o[right].classList.add('right');
+            if (k !== right) o[k].classList.add('wrong');
+            $('#fb').textContent = k === right ? okR : badR;
+            if (k === right) { fx.success(); confetti(40); cap(okR, okD); } else { fx.wrong(); cap(badR, badD); }
+            st.idx = 99; st.hold = false; st.rem = 6500;
+          };
+        });
+      },
+      steps: [T(askR, askD, null, 1500)]
+    };
+  };
+
+  /* ---------- scenes ---------- */
+  var hlm = function (id, arr) { $$('#' + id + ' .line').forEach(function (l, k) { l.classList.toggle('on', arr.indexOf(k) >= 0); }); };
+  var frames = function (id) { return $$('#' + id + ' .fr:not(.gone)'); };
+  var topFr = function (id) { var a = frames(id); return a.length ? a[a.length - 1] : null; };
+  var push = function (id, name, sub, cls) {
+    var box = $('#' + id); if (!box) return null;
+    var f = document.createElement('div');
+    f.className = 'fr' + (cls ? ' ' + cls : '');
+    f.innerHTML = '<b>' + name + '</b><span class="fs">' + sub + '</span><span class="rv"></span>';
+    box.appendChild(f); return f;
+  };
+  var setRv = function (el, t) { if (!el) return; el.querySelector('.rv').textContent = t; el.classList.add('done'); };
+  var popTop = function (id) {
+    var el = topFr(id); if (!el) return;
+    el.classList.add('gone');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+  };
+  var badge = function (t, s) { var b = $('#rb'); b.textContent = t; b.setAttribute('data-s', s || ''); b.classList.remove('hid'); };
+
+  var scenes = [
+    { title: 'Shuruaat',
+      html: function () {
+        return '<div class="scene s-title">' + mascot('big') + '<h1>Recursion in Python</h1>' +
+          '<p class="sub">Ek function jo khud ko bulata hai.</p>' +
+          '<div class="tags"><span>def</span><span>return</span><span>base case</span><span>call stack</span></div></div>';
+      },
+      steps: [
+        T('Namaste dosto! Main hoon Loopy. Aaj hum Recursion seekhenge, bilkul shuru se.', 'नमस्ते दोस्तों! मैं हूँ लूपी। आज हम रिकर्सन सीखेंगे, बिल्कुल शुरू से।', function () { fx.hello(); }),
+        T('Recursion ka matlab hai: ek function jo apne aap ko bulata hai.', 'रिकर्सन का मतलब है, एक फ़ंक्शन जो अपने आप को बुलाता है।', function () { fx.pop(); }),
+        T('Ghabrao mat! Hum dabbe jaise simple examples se samjhenge.', 'घबराओ मत! हम डिब्बे जैसे आसान उदाहरणों से समझेंगे।'),
+        T('Chalo, shuru karte hain!', 'चलो, शुरू करते हैं!')
+      ] },
+
+    { title: 'Dabbe ka example',
+      html: function () {
+        return '<div class="scene"><div class="tag good">Dabbe ke andar dabba</div>' +
+          '<div class="nest a"><span class="nl">Dabba 1</span><div class="hid" id="in1">' +
+          '<div class="nest b"><span class="nl">Dabba 2</span><div class="hid" id="in2">' +
+          '<div class="nest c"><span class="nl">Dabba 3</span><div class="hid" id="in3"><div class="gift">★ GIFT</div></div></div>' +
+          '</div></div></div></div></div>';
+      },
+      steps: [
+        T('Ye ek dabba hai. Chalo isse kholte hain.', 'ये एक डिब्बा है। चलो इसे खोलते हैं।'),
+        T('Andar ek aur dabba mila! Phir se wahi kaam: dabba kholo.', 'अंदर एक और डिब्बा मिला! फिर से वही काम: डिब्बा खोलो।', function () { show('#in1'); fx.pop(); }),
+        T('Isme bhi ek chhota dabba hai. Phir wahi kaam!', 'इसमें भी एक छोटा डिब्बा है। फिर वही काम!', function () { show('#in2'); fx.pop(); }),
+        T('Ye sabse chhota dabba hai. Andar gift mila, ab rukna hai!', 'ये सबसे छोटा डिब्बा है। अंदर गिफ़्ट मिला, अब रुकना है!', function () { show('#in3'); fx.success(); }),
+        T('Dekha? Har baar wahi kaam, bas dabba chhota hota gaya. Gift milte hi hum ruk gaye.', 'देखा? हर बार वही काम, बस डिब्बा छोटा होता गया। गिफ़्ट मिलते ही हम रुक गए।'),
+        T('Programming mein ise recursion kehte hain: wahi kaam, chhoti problem par, jab tak rukne ki jagah na aa jaye.', 'प्रोग्रामिंग में इसे रिकर्सन कहते हैं: वही काम, छोटी प्रॉब्लम पर, जब तक रुकने की जगह न आ जाए।')
+      ] },
+
+    { title: 'Factorial ka idea',
+      html: function () {
+        var rows = [['fact(4) = 4 × fact(3)', ''], ['fact(3) = 3 × fact(2)', ''], ['fact(2) = 2 × fact(1)', ''], ['fact(1) = 1', 'base']];
+        return '<div class="scene"><div class="pill">4! = 4 × 3 × 2 × 1 = 24</div>' +
+          rows.map(function (r, k) { return '<div class="rowx hid ' + r[1] + '" id="rx' + k + '">' + syn(r[0]) + '</div>'; }).join('') +
+          '<div class="note hid" id="n2x">Har baar problem chhoti: 4, 3, 2, 1</div></div>';
+      },
+      steps: [
+        T('Ek mazedaar cheez: factorial. 4 factorial matlab 4 guna 3 guna 2 guna 1, yani 24.', 'एक मज़ेदार चीज़: फैक्टोरियल। चार फैक्टोरियल मतलब चार गुणा तीन गुणा दो गुणा एक, यानी चौबीस।', function () { fx.pop(); }),
+        T('Dhyan se dekho. fact(4) ko hum seedha nahi nikalte. Ye hai 4 guna fact(3).', 'ध्यान से देखो। फैक्ट चार को हम सीधा नहीं निकालते। ये है चार गुणा फैक्ट तीन।', function () { show('#rx0'); fx.pop(); }),
+        T('Aur fact(3) kya hai? 3 guna fact(2).', 'और फैक्ट तीन क्या है? तीन गुणा फैक्ट दो।', function () { show('#rx1'); fx.pop(); }),
+        T('Aur fact(2) hai 2 guna fact(1).', 'और फैक्ट दो है दो गुणा फैक्ट एक।', function () { show('#rx2'); fx.pop(); }),
+        T('Lekin fact(1) sirf 1 hai. Yahan problem khatam!', 'लेकिन फैक्ट एक सिर्फ़ एक है। यहाँ प्रॉब्लम ख़त्म!', function () { show('#rx3'); fx.ding(1); }),
+        T('Dekha? Har baar problem chhoti hoti gayi: 4, 3, 2, 1. Yahi recursion ka jaadu hai.', 'देखा? हर बार प्रॉब्लम छोटी होती गई: चार, तीन, दो, एक। यही रिकर्सन का जादू है।', function () { show('#n2x'); fx.success(); })
+      ] },
+
+    { title: 'Code ke 2 hisse',
+      html: function () {
+        return '<div class="scene two"><div class="col">' +
+          code('c3', ['def fact(n):', '    if n == 1:', '        return 1', '    return n * fact(n - 1)']) +
+          '</div><div class="col"><div class="cond hid" id="rb">-</div><div class="note">Har recursion mein 2 cheezein zaroori hain</div></div></div>';
+      },
+      steps: [
+        T('Ab iska code dekhte hain. Recursion mein do cheezein hamesha hoti hain.', 'अब इसका कोड देखते हैं। रिकर्सन में दो चीज़ें हमेशा होती हैं।', function () { fx.whoosh(); }),
+        T('Pehli line: def fact n. Ye function ka naam hai. n wo number hai jiska factorial chahiye.', 'पहली लाइन: डेफ़ फैक्ट एन। ये फ़ंक्शन का नाम है। एन वो नंबर है जिसका फैक्टोरियल चाहिए।', function () { hlm('c3', [0]); fx.pop(); }),
+        T('Base case: agar n barabar 1 hai, to seedha 1 return karo. Yahan recursion ruk jata hai.', 'बेस केस: अगर एन बराबर एक है, तो सीधा एक रिटर्न करो। यहाँ रिकर्सन रुक जाता है।', function () { hlm('c3', [1, 2]); badge('BASE CASE: yahan ruko', 'yes'); fx.ding(1); }),
+        T('Recursive case: n guna fact(n minus 1). Yani chhoti problem par function ne khud ko bulaya.', 'रिकर्सिव केस: एन गुणा फैक्ट एन माइनस एक। यानी छोटी प्रॉब्लम पर फ़ंक्शन ने ख़ुद को बुलाया।', function () { hlm('c3', [3]); badge('RECURSIVE CASE: khud ko bulao', 'warn'); fx.ding(2); }),
+        T('Yaad rakho: base case rukne ke liye, recursive case khud ko bulane ke liye.', 'याद रखो: बेस केस रुकने के लिए, रिकर्सिव केस ख़ुद को बुलाने के लिए।', function () { hlm('c3', []); fx.success(); })
+      ] },
+
+    { title: 'Call stack',
+      html: function () {
+        return '<div class="scene two"><div class="col">' +
+          code('c4', ['def fact(n):', '    if n == 1:', '        return 1', '    return n * fact(n - 1)']) +
+          '<div class="statebox"><span class="lbl">fact(3) ka jawab</span><span class="val" id="v4">?</span></div></div>' +
+          '<div class="col"><div class="tag good">Call stack (upar = naya)</div><div class="stack" id="stk4"></div></div></div>';
+      },
+      steps: [
+        T('Ab dekhte hain computer ise andar se kaise chalata hai. Hum fact(3) chalayenge.', 'अब देखते हैं कंप्यूटर इसे अंदर से कैसे चलाता है। हम फैक्ट तीन चलाएँगे।', function () { fx.whoosh(); }),
+        T('Pehle fact(3) call hua, n barabar 3. 3 ek nahi hai, to ye fact(2) ko bulayega.', 'पहले फैक्ट तीन कॉल हुआ, एन बराबर तीन। तीन एक नहीं है, तो ये फैक्ट दो को बुलाएगा।', function () { push('stk4', 'fact(3)', 'n = 3'); hlm('c4', [3]); fx.tick(0); }),
+        T('Ab fact(2) call hua. Ye bhi ek nahi hai, to ye fact(1) ko bulayega. Dekho, upar naya dabba ban raha hai.', 'अब फैक्ट दो कॉल हुआ। ये भी एक नहीं है, तो ये फैक्ट एक को बुलाएगा। देखो, ऊपर नया डिब्बा बन रहा है।', function () { push('stk4', 'fact(2)', 'n = 2'); hlm('c4', [3]); fx.tick(1); }),
+        T('Ye plates ke dher jaisa hai. Ise call stack kehte hain. Sabse upar wali plate pehle khatam hoti hai.', 'ये प्लेटों के ढेर जैसा है। इसे कॉल स्टैक कहते हैं। सबसे ऊपर वाली प्लेट पहले ख़त्म होती है।'),
+        T('Ab fact(1) call hua. Yahan n barabar 1 hai. Base case mil gaya!', 'अब फैक्ट एक कॉल हुआ। यहाँ एन बराबर एक है। बेस केस मिल गया!', function () { push('stk4', 'fact(1)', 'n = 1', 'base'); hlm('c4', [1]); fx.tick(2); fx.ding(2); }),
+        T('Base case kehta hai: 1 return karo. Ab wapas jaane ka time hai.', 'बेस केस कहता है: एक रिटर्न करो। अब वापस जाने का समय है।', function () { hlm('c4', [2]); setRv(topFr('stk4'), 'return 1'); fx.ding(3); }),
+        T('fact(1) khatam. Ab fact(2) ko jawab 1 mila. 2 guna 1 barabar 2.', 'फैक्ट एक ख़त्म। अब फैक्ट दो को जवाब एक मिला। दो गुणा एक बराबर दो।', function () { popTop('stk4'); hlm('c4', [3]); setRv(topFr('stk4'), '2 × 1 = 2'); fx.pop(); }),
+        T('fact(2) khatam. Ab fact(3) ko 2 mila. 3 guna 2 barabar 6.', 'फैक्ट दो ख़त्म। अब फैक्ट तीन को दो मिला। तीन गुणा दो बराबर छह।', function () { popTop('stk4'); setRv(topFr('stk4'), '3 × 2 = 6'); fx.pop(); }),
+        T('Sabse upar wala bhi khatam. Final jawab 6!', 'सबसे ऊपर वाला भी ख़त्म। फ़ाइनल जवाब छह!', function () { popTop('stk4'); hlm('c4', []); bump($('#v4'), '6'); fx.success(); confetti(30); }),
+        T('Yaad rakho: pehle andar tak jaate hain, base case par rukte hain, phir jawab lekar wapas aate hain.', 'याद रखो: पहले अंदर तक जाते हैं, बेस केस पर रुकते हैं, फिर जवाब लेकर वापस आते हैं।')
+      ] },
+
+    { title: 'Base case bhoole to?',
+      html: function () {
+        return '<div class="scene two"><div class="col">' +
+          code('c5', ['def fact(n):', '    return n * fact(n - 1)']) +
+          '<div class="cond hid" id="er" data-s="no">RecursionError: maximum recursion depth exceeded</div></div>' +
+          '<div class="col"><div class="tag bad">Call stack badhta hi ja raha hai</div><div class="stack" id="stk5"></div></div></div>';
+      },
+      steps: [
+        T('Ab ek badi galti dekho. Agar base case bhool gaye to kya hoga?', 'अब एक बड़ी ग़लती देखो। अगर बेस केस भूल गए तो क्या होगा?', function () { fx.wrong(); }),
+        T('Is code mein rukne ka koi rasta nahi hai. fact(3) bulata hai fact(2) ko.', 'इस कोड में रुकने का कोई रास्ता नहीं है। फैक्ट तीन बुलाता है फैक्ट दो को।', function () { hlm('c5', [1]); push('stk5', 'fact(3)', 'n = 3'); fx.tick(0); }),
+        A(function () { push('stk5', 'fact(2)', 'n = 2'); fx.tick(1); }, 700),
+        A(function () { push('stk5', 'fact(1)', 'n = 1'); fx.tick(2); }, 700),
+        A(function () { push('stk5', 'fact(0)', 'n = 0'); fx.tick(3); }, 700),
+        A(function () { push('stk5', 'fact(-1)', 'n = -1'); fx.tick(4); }, 700),
+        A(function () { push('stk5', 'fact(-2)', 'n = -2'); fx.tick(5); }, 900),
+        T('n kabhi 1 par rukta hi nahi. 0, minus 1, minus 2, aur aise hi chalta jata hai.', 'एन कभी एक पर रुकता ही नहीं। ज़ीरो, माइनस एक, माइनस दो, और ऐसे ही चलता जाता है।'),
+        T('Python thodi der baad bol deta hai: bas karo! Aur RecursionError deta hai.', 'पाइथन थोड़ी देर बाद बोल देता है: बस करो! और रिकर्शन एरर देता है।', function () {
+          show('#er');
+          $$('#stk5 .fr').forEach(function (f) { f.classList.add('base'); });
+          fx.wrong(); fx.thud();
+        }),
+        T('Isliye hamesha base case likho. Ye recursion ka sabse zaroori rule hai.', 'इसलिए हमेशा बेस केस लिखो। ये रिकर्सन का सबसे ज़रूरी नियम है।', function () { hlm('c5', []); })
+      ] },
+
+    { title: 'Countdown',
+      html: function () {
+        return '<div class="scene two"><div class="col">' +
+          code('c6', ['def countdown(n):', '    if n == 0:', '        print("Liftoff!")', '        return', '    print(n)', '    countdown(n - 1)']) +
+          '<div class="console" id="o6"><div class="hd">Output</div></div></div>' +
+          '<div class="col"><div class="tag good">Call stack (upar = naya)</div><div class="stack" id="stk6"></div></div></div>';
+      },
+      steps: [
+        T('Ek aur example: countdown. Isme jawab return nahi hota, bas number print hote hain.', 'एक और उदाहरण: काउंटडाउन। इसमें जवाब रिटर्न नहीं होता, बस नंबर प्रिंट होते हैं।', function () { fx.whoosh(); }),
+        T('countdown(3) shuru. n 3 hai, to 3 print hua. Phir countdown(2) ko bulaya.', 'काउंटडाउन तीन शुरू। एन तीन है, तो तीन प्रिंट हुआ। फिर काउंटडाउन दो को बुलाया।', function () { push('stk6', 'countdown(3)', 'n = 3'); hlm('c6', [4, 5]); out('o6', '3'); fx.tick(0); fx.ding(0); }),
+        T('countdown(2): 2 print hua. Phir countdown(1) bulaya.', 'काउंटडाउन दो: दो प्रिंट हुआ। फिर काउंटडाउन एक बुलाया।', function () { push('stk6', 'countdown(2)', 'n = 2'); out('o6', '2'); fx.tick(1); fx.ding(1); }),
+        T('countdown(1): 1 print hua. Phir countdown(0) bulaya.', 'काउंटडाउन एक: एक प्रिंट हुआ। फिर काउंटडाउन ज़ीरो बुलाया।', function () { push('stk6', 'countdown(1)', 'n = 1'); out('o6', '1'); fx.tick(2); fx.ding(2); }),
+        T('countdown(0): n barabar 0, base case! Liftoff print hua aur function return ho gaya.', 'काउंटडाउन ज़ीरो: एन बराबर ज़ीरो, बेस केस! लिफ़्टऑफ़ प्रिंट हुआ और फ़ंक्शन रिटर्न हो गया।', function () {
+          push('stk6', 'countdown(0)', 'n = 0', 'base'); hlm('c6', [1, 2, 3]); out('o6', 'Liftoff!'); fx.tick(3); fx.success();
+        }),
+        T('Ab saare function ek ek karke khatam hote hain, jaise plates uthate hain.', 'अब सारे फ़ंक्शन एक एक करके ख़त्म होते हैं, जैसे प्लेटें उठाते हैं।', function () {
+          [0, 1, 2, 3].forEach(function (k) { setTimeout(function () { popTop('stk6'); fx.pop(); }, 500 + k * 450); });
+          hlm('c6', []);
+        }),
+        T('Yaha wapas aate waqt kuch karna nahi tha, isliye bas khatam hote gaye.', 'यहाँ वापस आते वक़्त कुछ करना नहीं था, इसलिए बस ख़त्म होते गए।')
+      ] },
+
+    quiz('Quick check 1', ['def add(n):', '    if n == 0:', '        return 0', '    return n + add(n - 1)', 'print(add(3))'], ['3', '6', 'Error'], 1,
+      'Sahi! add(3) = 3 + 2 + 1 + 0 = 6.', 'सही! ऐड तीन बराबर तीन जमा दो जमा एक जमा ज़ीरो, यानी छह।',
+      'Thoda sa chuk gaye. add(3) = 3 + add(2) = 3 + 2 + 1 + 0, jawab 6.', 'थोड़ा सा चूक गए। ऐड तीन बराबर तीन जमा ऐड दो, यानी तीन जमा दो जमा एक जमा ज़ीरो, जवाब छह।',
+      'Ab aapki baari! Ye code kya print karega?', 'अब आपकी बारी! ये कोड क्या प्रिंट करेगा?'),
+
+    quiz('Quick check 2', ['def show(n):', '    if n == 0:', '        return', '    print(n)', '    show(n - 1)', 'show(3)'], ['3 2 1', '3 2 1 0', '1 2 3'], 0,
+      'Sahi! 3, 2, 1 print hote hain. n 0 hote hi function return kar jata hai, 0 print nahi hota.', 'सही! तीन, दो, एक प्रिंट होते हैं। एन ज़ीरो होते ही फ़ंक्शन रिटर्न कर जाता है, ज़ीरो प्रिंट नहीं होता।',
+      'Kareeb! n 0 hote hi base case chal jata hai aur return ho jata hai, to 0 print nahi hota. Jawab 3 2 1.', 'क़रीब! एन ज़ीरो होते ही बेस केस चल जाता है और रिटर्न हो जाता है, तो ज़ीरो प्रिंट नहीं होता। जवाब तीन दो एक।',
+      'Ek aur sawal! Dhyan se dekho, base case kahan hai?', 'एक और सवाल! ध्यान से देखो, बेस केस कहाँ है?'),
+
+    { title: 'Yaad rakho',
+      html: function () {
+        var c = [
+          ['Base case', 'Yahan ruk jao. Sabse chhoti problem ka seedha jawab.', 'if n == 1: return 1'],
+          ['Recursive case', 'Chhoti problem par khud ko bulao.', 'return n * fact(n - 1)'],
+          ['Call stack', 'Plates ka dher. Upar wala pehle khatam.', 'fact(3) > fact(2) > fact(1)'],
+          ['Base case bhoole?', 'Function rukega nahi: RecursionError.', 'def f(n): return f(n)']
+        ];
+        return '<div class="scene"><div class="cards">' + c.map(function (x, k) {
+          return '<div class="card hid" id="cd' + k + '"><h3>' + x[0] + '</h3><p>' + x[1] + '</p><code>' + esc(x[2]) + '</code></div>';
+        }).join('') + '</div>' +
+          '<div class="fin hid" id="fin7"><strong>Shabash! Ab khud try karo.</strong>' +
+          '<a class="btn primary" href="https://python-concept-experience-challenge.vercel.app/" target="_blank" rel="noopener">Python Concept Lab kholo</a></div></div>';
+      },
+      steps: [
+        T('Chalo, ek baar phir yaad karte hain.', 'चलो, एक बार फिर याद करते हैं।'),
+        T('Base case: yahan ruk jao. Sabse chhoti problem ka seedha jawab.', 'बेस केस: यहाँ रुक जाओ। सबसे छोटी प्रॉब्लम का सीधा जवाब।', function () { show('#cd0'); fx.pop(); }),
+        T('Recursive case: chhoti problem par khud ko bulao.', 'रिकर्सिव केस: छोटी प्रॉब्लम पर ख़ुद को बुलाओ।', function () { show('#cd1'); fx.pop(); }),
+        T('Call stack plates ka dher hai. Upar wali plate pehle khatam hoti hai.', 'कॉल स्टैक प्लेटों का ढेर है। ऊपर वाली प्लेट पहले ख़त्म होती है।', function () { show('#cd2'); fx.pop(); }),
+        T('Aur base case bhool gaye, to function rukega nahi aur RecursionError aayega.', 'और बेस केस भूल गए, तो फ़ंक्शन रुकेगा नहीं और रिकर्शन एरर आएगा।', function () { show('#cd3'); fx.pop(); }),
+        T('Shabash dosto! Ab khud code likhkar try karo. Phir milte hain!', 'शाबाश दोस्तों! अब ख़ुद कोड लिखकर ट्राई करो। फिर मिलते हैं!', function () { show('#fin7'); fx.success(); confetti(80); }, 5000)
+      ] }
+  ];
+
+/* ---------- player engine ---------- */
+  var go = function (i) {
+    var s = scenes[i];
+    st.i = i; st.idx = 0; st.rem = 0; st.hold = !!s.hold; st.ended = false;
+    seen[i] = true;
+    $('#stage').innerHTML = s.html();
+    $('#fill').style.width = '0%';
+    if (s.init) s.init();
+    ui();
+  };
+  var ui = function () {
+    $$('#dots .dot').forEach(function (d, k) {
+      d.classList.toggle('active', k === st.i);
+      d.classList.toggle('seen', !!seen[k]);
+    });
+    $('#lab').textContent = 'Scene ' + (st.i + 1) + ' / ' + scenes.length + ' · ' + scenes[st.i].title;
+    $('#play').textContent = st.ended ? 'Replay' : (st.playing ? 'Pause' : 'Play');
+  };
+  var tick = function () {
+    if (!st.playing || st.speaking) return;
+    if (st.rem > 0) { st.rem -= 50 * st.speed; if (st.rem > 0) return; }
+    var s = scenes[st.i];
+    if (st.idx < s.steps.length) {
+      var step = s.steps[st.idx++];
+      st.rem = step[1];
+      step[0]();
+      $('#fill').style.width = Math.min(100, st.idx / s.steps.length * 100) + '%';
+    } else if (!st.hold) {
+      if (st.i < scenes.length - 1) { fx.whoosh(); go(st.i + 1); }
+      else { st.playing = false; st.ended = true; stopSpeech(); ui(); }
+    }
+  };
+  var begin = function () {
+    initAudio(); musicStart();
+    $('#start').hidden = true;
+    st.started = true; st.playing = true; st.ended = false;
+    go(0);
+  };
+  var nav = function (i) {
+    if (!st.started) { begin(); return; }
+    i = Math.max(0, Math.min(scenes.length - 1, i));
+    stopSpeech(); st.playing = true; fx.whoosh(); go(i);
+  };
+  var toggle = function () {
+    if (!st.started) { begin(); return; }
+    if (st.ended) { st.ended = false; st.playing = true; go(0); return; }
+    st.playing = !st.playing;
+    if (!st.playing) stopSpeech();
+    ui();
+  };
+
+  $('#dots').innerHTML = scenes.map(function (s, k) {
+    return '<button class="dot" type="button" data-i="' + k + '"><span class="n">' + (k + 1) + '</span><span>' + s.title + '</span></button>';
+  }).join('');
+  $$('#dots .dot').forEach(function (d) { d.onclick = function () { nav(+d.getAttribute('data-i')); }; });
+  $('#go').onclick = begin;
+  $('#prev').onclick = function () { nav(st.i - 1); };
+  $('#next').onclick = function () { nav(st.i + 1); };
+  $('#play').onclick = toggle;
+  $('#speed').onclick = function () {
+    var order = [1, 1.25, 1.5, 0.75];
+    st.speed = order[(order.indexOf(st.speed) + 1) % order.length];
+    this.textContent = st.speed + '×';
+  };
+  var flip = function (id, key, after) {
+    $(id).onclick = function () {
+      opts[key] = !opts[key];
+      this.setAttribute('aria-pressed', opts[key] ? 'true' : 'false');
+      if (after) after();
+    };
+  };
+  flip('#tvoice', 'voice', function () { if (!opts.voice) stopSpeech(); });
+  flip('#tsfx', 'sfx');
+  flip('#tmus', 'music');
+  $('#full').onclick = function () {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else { var p = $('#player').requestFullscreen(); if (p && p.catch) p.catch(function () {}); }
+    } catch (e) {}
+  };
+  document.addEventListener('keydown', function (e) {
+    var tag = e.target && e.target.tagName;
+    if (e.key === 'ArrowRight') nav(st.i + 1);
+    else if (e.key === 'ArrowLeft') nav(st.i - 1);
+    else if (e.key === ' ' && tag !== 'BUTTON' && tag !== 'A') { e.preventDefault(); toggle(); }
+  });
+
+  go(0);
+  ui();
+  setInterval(tick, 50);
+})();
+</script>
+
+</body></html>

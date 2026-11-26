@@ -1,0 +1,761 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Loop Lab Animation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a video-style player with Loopy the robot teacher in the subtitle bar, a dark animated stage, scene pills below. */
+:root {
+  --bg: #0e1a26; --panel: #162636; --panel2: #1c3145; --line: #2b4660;
+  --fg: #eef4f8; --muted: #9bb2c3;
+  --amber: #ffb42e; --mint: #3fe0a0; --coral: #ff6e6e; --sky: #5db4ff; --violet: #b78bff;
+  --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  background-image: radial-gradient(900px 500px at 15% -10%, rgba(93,180,255,.16), transparent 60%), radial-gradient(800px 500px at 95% 10%, rgba(183,139,255,.14), transparent 60%);
+  padding-block: 20px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+#fx, #conf { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+#fx { z-index: 0; }
+#conf { z-index: 50; }
+.fl { position: absolute; bottom: 0; font-family: var(--mono); font-weight: 700; color: var(--sky); opacity: 0; animation: floatUp linear infinite; }
+@keyframes floatUp { 0% { transform: translateY(0) rotate(0); opacity: 0; } 12% { opacity: .22; } 88% { opacity: .22; } 100% { transform: translateY(-110vh) rotate(35deg); opacity: 0; } }
+.cf { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 2px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translate3d(var(--dx), 110vh, 0) rotate(720deg); } }
+
+.wrap { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand { display:flex; align-items:center; gap:8px; font: 800 24px var(--display); color: var(--amber); text-shadow: 0 0 18px rgba(255,180,46,.45); text-decoration:none; }
+.brand svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.topic { color: var(--muted); font-weight: 700; letter-spacing: .04em; }
+
+.player { display: flex; flex-direction: column; min-width: 0; }
+.stagewrap { position: relative; }
+.stage {
+  background: linear-gradient(135deg, #162636, #1b3550, #1a2a45, #162636); background-size: 300% 300%; animation: bgshift 16s ease infinite;
+  border: 1px solid var(--line); border-radius: 18px 18px 0 0;
+  padding: clamp(16px, 3vw, 32px); min-height: clamp(400px, 54vw, 560px);
+  display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+@keyframes bgshift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.start { position: absolute; inset: 0; z-index: 5; background: rgba(9,18,27,.9); border-radius: 18px 18px 0 0; display: grid; place-items: center; text-align: center; padding: 20px; }
+.start .in { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.start h2 { margin: 0; font: 800 clamp(26px, 5vw, 44px) var(--display); }
+.start p { margin: 0; color: var(--muted); font-weight: 700; max-width: 440px; }
+.btn.big { font-size: 20px; padding: 14px 30px; border-radius: 14px; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,180,46,.55); } 50% { box-shadow: 0 0 0 16px rgba(255,180,46,0); } }
+
+.capbar { background: #09121b; border: 1px solid var(--line); border-top: none; padding: 10px 18px; display: flex; gap: 14px; align-items: center; min-height: 6em; }
+#mas { flex: none; }
+#mas svg { width: 56px; height: auto; display: block; }
+.cap { flex: 1; min-width: 0; text-align: center; font: 700 clamp(17px, 2.6vw, 24px)/1.35 var(--body); text-wrap: balance; }
+.cap.pop { animation: enter .4s var(--spring) both; }
+.bar { height: 6px; background: var(--panel2); }
+.fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--amber), var(--mint)); transition: width .5s ease; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 12px; }
+.controls .lab { margin-left: auto; color: var(--muted); font-weight: 700; font-size: 14px; }
+.btn { background: var(--panel2); border: 1px solid var(--line); color: var(--fg); border-radius: 10px; padding: 9px 14px; font: 800 14px var(--body); cursor: pointer; text-decoration: none; display: inline-block; }
+.btn:hover { border-color: var(--amber); }
+.btn.primary { background: var(--amber); border-color: var(--amber); color: #1a1200; }
+.btn[aria-pressed="false"] { opacity: .55; text-decoration: line-through; }
+.btn:focus-visible, .dot:focus-visible, .opt:focus-visible, a:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+.dots { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
+.dot { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 6px 12px; font: 700 13px var(--body); cursor: pointer; display: inline-flex; gap: 6px; }
+.dot .n { color: var(--amber); }
+.dot.seen { color: var(--fg); }
+.dot.active { border-color: var(--amber); color: var(--amber); background: rgba(255,180,46,.1); }
+@media (max-width: 640px) { .dot span:not(.n) { display: none; } }
+.foot { color: var(--muted); font-size: 14px; }
+.foot a { color: var(--sky); }
+
+/* mascot */
+.mfloat { animation: mfloat 3s ease-in-out infinite; }
+@keyframes mfloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.meyes { transform-origin: 60px 60px; animation: blink 4.5s infinite; }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+.mant { animation: ant 1.2s ease-in-out infinite; }
+@keyframes ant { 50% { fill: #ffb42e; } }
+.mmouth { transform-origin: 60px 81px; }
+svg.talk .mmouth { animation: talk .26s ease-in-out infinite; }
+@keyframes talk { 50% { transform: scaleY(2.4); } }
+.mascot.big { width: clamp(110px, 18vw, 160px); height: auto; }
+
+/* scenes */
+.scene { width: 100%; display: flex; flex-direction: column; gap: 18px; align-items: center; justify-content: center; animation: enter .5s var(--spring) both; }
+.scene.two { flex-direction: row; align-items: center; gap: 22px; }
+.col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+@media (max-width: 720px) { .scene.two { flex-direction: column; align-items: stretch; } }
+@keyframes enter { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+.hid { opacity: 0; transform: scale(.7) translateY(10px); }
+.line, .console, .nb, .card, .codebox, .opt, .st, .chip, .fin, .note, .stp, .bl, .tk, .cond { transition: opacity .4s, transform .5s var(--spring), background .25s, border-color .25s, color .25s, box-shadow .3s; }
+
+.s-title { text-align: center; }
+h1 { margin: 0; font: 800 clamp(36px, 7vw, 68px)/1.05 var(--display); text-wrap: balance; background: linear-gradient(90deg, var(--amber), #ff8fb1, var(--sky)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { margin: 0; color: var(--muted); font-size: clamp(16px, 2.4vw, 22px); font-weight: 700; }
+.tags { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.tags span { font: 700 15px var(--mono); padding: 6px 14px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); color: var(--sky); animation: enter .6s var(--spring) both; }
+.tags span:nth-child(2) { animation-delay: .15s; } .tags span:nth-child(3) { animation-delay: .3s; } .tags span:nth-child(4) { animation-delay: .45s; }
+
+.tag { font: 800 13px var(--body); letter-spacing: .14em; text-transform: uppercase; }
+.tag.bad { color: var(--coral); } .tag.good { color: var(--mint); }
+
+.codebox { background: #0a141d; border: 1px solid var(--line); border-radius: 12px; padding: 12px 0; overflow-x: auto; font-family: var(--mono); font-size: clamp(13px, 1.9vw, 18px); font-variant-numeric: tabular-nums; }
+.scene:not(.two) .codebox { width: 100%; max-width: 440px; }
+.line { white-space: pre; padding: 3px 16px; border-left: 4px solid transparent; }
+.line.on { background: rgba(255,180,46,.18); border-left-color: var(--amber); box-shadow: inset 0 0 20px rgba(255,180,46,.12); }
+.kw { color: #ff8fb1; } .str { color: var(--mint); } .num { color: var(--sky); } .fn { color: #c9a8ff; }
+
+.console { background: #050b11; border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; font-family: var(--mono); min-height: 110px; font-size: clamp(14px, 2vw, 18px); }
+.console .hd { color: var(--muted); font: 800 12px var(--body); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px; }
+.o { color: var(--mint); animation: enter .35s var(--spring) both; text-shadow: 0 0 10px rgba(63,224,160,.5); }
+
+.statebox { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; flex: 1; min-width: 0; }
+.lbl { color: var(--muted); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 13px; }
+.val { font: 800 clamp(26px, 4.6vw, 44px) var(--display); color: var(--amber); }
+.val.bump { animation: bump .5s var(--spring); }
+@keyframes bump { 0% { transform: scale(.4); } 100% { transform: scale(1); } }
+
+.track { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.st { width: clamp(52px, 9vw, 76px); aspect-ratio: 1; border-radius: 50%; border: 3px dashed var(--line); display: grid; place-items: center; font: 800 26px var(--display); color: var(--muted); }
+.st.act { border-style: solid; border-color: var(--amber); background: var(--amber); color: #1a1200; transform: scale(1.14); box-shadow: 0 0 26px rgba(255,180,46,.6); animation: hop .55s var(--spring); }
+@keyframes hop { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-20px) scale(1.14); } 100% { transform: translateY(0) scale(1.14); } }
+.st.done { border-style: solid; border-color: var(--mint); color: var(--mint); }
+
+.stairs { display: flex; align-items: flex-end; gap: 6px; height: 200px; margin-top: 34px; }
+.stp { position: relative; width: clamp(48px, 10vw, 84px); background: linear-gradient(#3a7cc0, #1d4a73); border-radius: 8px 8px 0 0; display: flex; align-items: flex-end; justify-content: center; font: 800 22px var(--display); padding-bottom: 6px; color: #cfe8ff; }
+.ballw { position: absolute; bottom: 100%; left: 0; right: 0; display: flex; justify-content: center; padding-bottom: 4px; }
+.bl { width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #ffe3a0, #ff9d00); box-shadow: 0 0 16px rgba(255,180,46,.8); }
+.bl:not(.hid) { animation: ballhop .7s var(--spring); }
+@keyframes ballhop { 0% { transform: translateY(-60px) scale(.6); } 60% { transform: translateY(0) scale(1.15, .8); } 100% { transform: none; } }
+
+.pill { font: 700 clamp(20px, 4vw, 34px) var(--mono); padding: 8px 22px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); color: var(--amber); }
+.numrow { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; row-gap: 30px; }
+.nb { width: clamp(52px, 10vw, 84px); aspect-ratio: 1; border-radius: 14px; display: grid; place-items: center; font: 800 clamp(26px, 5vw, 40px) var(--display); background: var(--panel2); border: 2px solid var(--sky); color: var(--sky); }
+.nb.cur { background: var(--sky); color: #06223b; box-shadow: 0 0 26px rgba(93,180,255,.7); transform: translateY(-8px) scale(1.1); }
+.nb.ghost { border-style: dashed; border-color: var(--coral); color: var(--coral); background: transparent; }
+.note { color: var(--muted); font-weight: 700; text-align: center; }
+
+.big { font: 700 clamp(22px, 4.4vw, 44px)/2.5 var(--mono); background: #0a141d; border: 1px solid var(--line); border-radius: 16px; padding: 14px clamp(14px, 3vw, 34px) 44px; max-width: 100%; overflow-x: auto; }
+.big .l2 { white-space: pre; }
+.tk { position: relative; display: inline-block; padding: 0 4px; border-radius: 8px; }
+.tk.on { background: rgba(255,180,46,.22); box-shadow: 0 0 0 2px var(--amber), 0 0 24px rgba(255,180,46,.45); transform: translateY(-3px) scale(1.07); }
+.tk.dim { opacity: .3; }
+.tk::after { content: attr(data-l); position: absolute; left: 50%; top: calc(100% - 6px); transform: translateX(-50%) scale(.5); opacity: 0; white-space: nowrap; font: 800 clamp(12px, 1.8vw, 16px)/1.4 var(--body); background: var(--amber); color: #1a1200; border-radius: 8px; padding: 0 10px; transition: opacity .3s, transform .4s var(--spring); z-index: 2; pointer-events: none; }
+.tk.on::after { opacity: 1; transform: translateX(-50%) scale(1); }
+
+.chip { width: clamp(44px, 8vw, 64px); aspect-ratio: 1; border-radius: 12px; display: grid; place-items: center; font: 800 26px var(--display); background: var(--panel2); border: 2px solid var(--line); position: relative; }
+.chip.cur { border-color: var(--amber); transform: translateY(-8px) scale(1.1); box-shadow: 0 0 20px rgba(255,180,46,.5); }
+.chip.ok { background: rgba(63,224,160,.18); border-color: var(--mint); color: var(--mint); }
+.chip.skip { background: rgba(255,180,46,.18); border-color: var(--amber); color: var(--amber); animation: wob .6s; }
+.chip.stop { background: rgba(255,110,110,.2); border-color: var(--coral); color: var(--coral); animation: shake .5s; }
+.chip.dim { opacity: .3; }
+@keyframes wob { 30% { transform: rotate(-12deg); } 60% { transform: rotate(10deg); } }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+.chip[data-tag]::after { content: attr(data-tag); position: absolute; top: 100%; margin-top: 4px; font: 800 12px var(--body); white-space: nowrap; }
+
+.vis { display: flex; gap: 16px; align-items: flex-end; }
+.glass { position: relative; width: 110px; height: 150px; flex: none; border: 4px solid var(--sky); border-top: none; border-radius: 0 0 24px 24px; overflow: hidden; background: rgba(93,180,255,.06); }
+.water { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(#7cc4ff, #3a8fe0); transition: height .9s ease; }
+.water::before { content: ""; position: absolute; left: -10%; right: -10%; top: -8px; height: 16px; border-radius: 50%; background: #9bd3ff; animation: wave 1.6s ease-in-out infinite alternate; }
+@keyframes wave { to { transform: translateX(8%); } }
+.cond { font: 700 clamp(18px, 3vw, 26px) var(--mono); padding: 10px 16px; border-radius: 12px; background: var(--panel2); border: 2px solid var(--line); display: inline-flex; gap: 12px; align-items: center; align-self: flex-start; color: var(--muted); }
+.cond .yes { color: var(--mint); } .cond .no { color: var(--coral); }
+.cond[data-s="yes"] { border-color: var(--mint); box-shadow: 0 0 24px rgba(63,224,160,.4); }
+.cond[data-s="no"] { border-color: var(--coral); box-shadow: 0 0 24px rgba(255,110,110,.4); }
+
+.q { font: 800 clamp(22px, 4vw, 34px)/1.2 var(--display); text-align: center; text-wrap: balance; }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 640px; }
+@media (max-width: 560px) { .opts { grid-template-columns: 1fr; } }
+.opt { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--panel2); border: 2px solid var(--line); color: var(--fg); font: 700 18px var(--body); cursor: pointer; text-align: left; }
+.opt b { color: var(--amber); }
+.opt .mono { font-family: var(--mono); }
+.opt:hover:not(:disabled) { border-color: var(--amber); transform: translateY(-3px); }
+.opt.right { border-color: var(--mint); background: rgba(63,224,160,.16); animation: bump .5s var(--spring); }
+.opt.wrong { border-color: var(--coral); background: rgba(255,110,110,.16); animation: shake .5s; }
+.fb { min-height: 1.5em; font-weight: 700; color: var(--muted); text-align: center; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; width: 100%; }
+.card { background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { margin: 0; font: 800 24px var(--display); color: var(--amber); }
+.card p { margin: 0; }
+.card code { font-family: var(--mono); color: var(--sky); font-size: 15px; }
+.fin { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.fin strong { font: 800 clamp(22px, 4vw, 32px) var(--display); }
+
+.player:fullscreen { background: var(--bg); justify-content: center; padding: 16px; }
+.player:fullscreen .stage { min-height: 62vh; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+
+<div id="fx" aria-hidden="true"></div>
+<div id="conf" aria-hidden="true"></div>
+<main class="wrap">
+  <header class="top">
+    <a class="brand" href="../index.html"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></svg> loop lab</a>
+    <span class="topic">Topic 9 · Loops in Python</span>
+  </header>
+
+  <section class="player" id="player" aria-label="Loops in Python animation">
+    <div class="stagewrap">
+      <div class="stage" id="stage"></div>
+      <div class="start" id="start">
+        <div class="in">
+          <div id="startmas"></div>
+          <h2>Loops seekhte hain, Loopy ke saath</h2>
+          <p>Beginner ke liye step-by-step animation. Awaaz aur sound ke liye volume on rakhna.</p>
+          <button class="btn primary big" id="go" type="button">▶ Shuru karo</button>
+        </div>
+      </div>
+    </div>
+    <div class="capbar"><div id="mas"></div><div class="cap" id="cap" aria-live="polite">Shuru karne ke liye play dabao.</div></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="controls">
+      <button class="btn" id="prev" type="button">← Peeche</button>
+      <button class="btn primary" id="play" type="button">Play</button>
+      <button class="btn" id="next" type="button">Aage →</button>
+      <button class="btn" id="speed" type="button" title="Speed badlo">1×</button>
+      <button class="btn" id="tvoice" type="button" aria-pressed="true">Voice</button>
+      <button class="btn" id="tsfx" type="button" aria-pressed="true">Sound</button>
+      <button class="btn" id="tmus" type="button" aria-pressed="true">Music</button>
+      <button class="btn" id="full" type="button">Full screen</button>
+      <span class="lab" id="lab"></span>
+    </div>
+    <nav class="dots" id="dots" aria-label="Scenes"></nav>
+  </section>
+
+  <p class="foot">Shortcut: Space se play/pause, left aur right arrow se scene badlo. Hindi voice na mile to subtitles padhte raho. Khud try karne ke liye <a href="https://python-concept-experience-challenge.vercel.app/" target="_blank" rel="noopener">Loop Lab</a> kholo.</p>
+</main>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var $$ = function (s) { return document.querySelectorAll(s); };
+  var esc = function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var syn = function (s) {
+    return esc(s).replace(/("[^"]*")|\b(for|in|while|if|continue|break)\b|\b(print|range)\b|\b(\d+)\b/g, function (m, a, b, c, d) {
+      return a ? '<span class="str">' + a + '</span>' : b ? '<span class="kw">' + b + '</span>' : c ? '<span class="fn">' + c + '</span>' : '<span class="num">' + d + '</span>';
+    });
+  };
+  var code = function (id, lines, hid) {
+    return '<div class="codebox" id="' + id + '">' + lines.map(function (l) {
+      return '<div class="line' + (hid ? ' hid' : '') + '">' + syn(l) + '</div>';
+    }).join('') + '</div>';
+  };
+  var show = function (sel) { $$(sel).forEach(function (e) { e.classList.remove('hid'); }); };
+  var hl = function (id, i) { $$('#' + id + ' .line').forEach(function (l, k) { l.classList.toggle('on', k === i); }); };
+  var out = function (id, t) { var d = document.createElement('div'); d.className = 'o'; d.textContent = t; $('#' + id).appendChild(d); };
+  var range = function (n) { var a = []; for (var i = 0; i < n; i++) a.push(i); return a; };
+  var bump = function (el, t) { el.textContent = t; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); };
+
+  var opts = { voice: true, sfx: true, music: true };
+  var st = { i: 0, idx: 0, rem: 0, hold: false, playing: false, started: false, ended: false, speaking: false, speed: 1, utt: 0 };
+  var seen = {};
+
+  /* ---------- mascot ---------- */
+  var mascot = function (cls) {
+    return '<svg class="mascot ' + (cls || '') + '" viewBox="0 0 120 140" aria-hidden="true"><g class="mfloat">' +
+      '<line x1="60" y1="30" x2="60" y2="16" stroke="#ffb42e" stroke-width="4" stroke-linecap="round"/><circle class="mant" cx="60" cy="10" r="7" fill="#ff6e6e"/>' +
+      '<rect x="18" y="30" width="84" height="64" rx="26" fill="#27476a" stroke="#5db4ff" stroke-width="4"/>' +
+      '<g class="meyes"><ellipse cx="44" cy="60" rx="9" ry="10" fill="#fff"/><ellipse cx="76" cy="60" rx="9" ry="10" fill="#fff"/><circle cx="46" cy="62" r="4.5" fill="#0e1a26"/><circle cx="78" cy="62" r="4.5" fill="#0e1a26"/></g>' +
+      '<rect class="mmouth" x="48" y="78" width="24" height="7" rx="3.5" fill="#ffb42e"/>' +
+      '<rect x="32" y="98" width="56" height="30" rx="14" fill="#1c3145" stroke="#5db4ff" stroke-width="3"/>' +
+      '<text x="60" y="121" text-anchor="middle" font-size="20" font-weight="800" fill="#ffb42e" font-family="Baloo 2, sans-serif">↻</text></g></svg>';
+  };
+  $('#mas').innerHTML = mascot('');
+  $('#startmas').innerHTML = mascot('big');
+
+  /* ---------- background symbols + confetti ---------- */
+  (function () {
+    var words = ['for', 'while', '0', '1', '2', '[ ]', ':', 'i', '+1', 'range', 'print', '↻', 'break'];
+    var box = $('#fx');
+    for (var k = 0; k < 16; k++) {
+      var s = document.createElement('span');
+      s.className = 'fl'; s.textContent = words[k % words.length];
+      s.style.left = (Math.random() * 96) + '%';
+      s.style.fontSize = (14 + Math.random() * 22) + 'px';
+      s.style.animationDuration = (16 + Math.random() * 18) + 's';
+      s.style.animationDelay = (-Math.random() * 30) + 's';
+      box.appendChild(s);
+    }
+  })();
+  var confetti = function (n) {
+    var box = $('#conf'), cols = ['#ffb42e', '#3fe0a0', '#ff6e6e', '#5db4ff', '#b78bff', '#ff8fb1'];
+    for (var k = 0; k < n; k++) {
+      var d = document.createElement('div');
+      d.className = 'cf';
+      d.style.left = (Math.random() * 100) + '%';
+      d.style.background = cols[k % cols.length];
+      d.style.setProperty('--dx', ((Math.random() - .5) * 240) + 'px');
+      d.style.animationDuration = (1.8 + Math.random() * 1.8) + 's';
+      d.style.animationDelay = (Math.random() * .5) + 's';
+      box.appendChild(d);
+      (function (e) { setTimeout(function () { if (e.parentNode) e.parentNode.removeChild(e); }, 4500); })(d);
+    }
+  };
+
+  /* ---------- audio ---------- */
+  var ac = null, master = null;
+  var initAudio = function () {
+    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    try {
+      var C = window.AudioContext || window.webkitAudioContext;
+      ac = new C(); master = ac.createGain(); master.gain.value = .9; master.connect(ac.destination);
+    } catch (e) { ac = null; }
+  };
+  var tone = function (f, d, type, v, delay, f2, force) {
+    if (!ac || !(opts.sfx || force)) return;
+    var t = ac.currentTime + (delay || 0), o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(v || .15, t + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .03);
+  };
+  var noise = function (d, f0, f1, v) {
+    if (!ac || !opts.sfx) return;
+    var n = Math.floor(ac.sampleRate * d), b = ac.createBuffer(1, n, ac.sampleRate), data = b.getChannelData(0);
+    for (var k = 0; k < n; k++) data[k] = Math.random() * 2 - 1;
+    var s = ac.createBufferSource(); s.buffer = b;
+    var f = ac.createBiquadFilter(); f.type = 'bandpass';
+    var t = ac.currentTime;
+    f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + d);
+    var g = ac.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t);
+  };
+  var fx = {
+    pop: function () { tone(520, .09, 'sine', .14, 0, 880); },
+    tick: function (n) { tone(380 + (n || 0) * 70, .12, 'triangle', .17); },
+    ding: function (n) { tone(880 + (n || 0) * 110, .35, 'sine', .13); tone(1320 + (n || 0) * 165, .3, 'sine', .06, .03); },
+    whoosh: function () { noise(.35, 300, 2400, .08); },
+    success: function () { [523, 659, 784, 1047].forEach(function (f, k) { tone(f, .3, 'triangle', .14, k * .11); }); },
+    wrong: function () { tone(220, .4, 'sawtooth', .09, 0, 110); },
+    splash: function () { tone(320, .25, 'sine', .12, 0, 720); tone(480, .2, 'sine', .08, .08, 900); },
+    boing: function () { tone(260, .32, 'sine', .15, 0, 560); },
+    thud: function () { tone(150, .28, 'sine', .22, 0, 55); noise(.12, 500, 120, .06); },
+    hello: function () { [392, 523, 659, 784].forEach(function (f, k) { tone(f, .22, 'triangle', .12, k * .09); }); }
+  };
+  var mus = null, mstep = 0;
+  var scale = [261.63, 293.66, 329.63, 392, 440, 523.25, 587.33];
+  var seq = [0, 2, 4, 2, 5, 4, 2, 1];
+  var musicStart = function () {
+    if (mus || !ac) return;
+    mus = setInterval(function () {
+      if (!opts.music || !st.playing) return;
+      var f = scale[seq[mstep % 8]];
+      tone(f, .55, 'sine', .022, 0, 0, true);
+      if (mstep % 4 === 0) tone(f / 2, 1, 'sine', .03, 0, 0, true);
+      mstep++;
+    }, 480);
+  };
+
+  /* ---------- voice ---------- */
+  var voices = [];
+  var loadVoices = function () { try { voices = window.speechSynthesis ? speechSynthesis.getVoices() : []; } catch (e) { voices = []; } };
+  if (window.speechSynthesis) { loadVoices(); try { speechSynthesis.onvoiceschanged = loadVoices; } catch (e) {} }
+  var talkT = null;
+  var talk = function (on) { var m = $('#mas svg'); if (m) m.classList.toggle('talk', on); };
+  var stopSpeech = function () {
+    st.utt++; st.speaking = false;
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+    clearTimeout(talkT); talk(false);
+  };
+  var speak = function (roman, dev) {
+    stopSpeech();
+    if (!opts.voice || !window.speechSynthesis || !st.playing) return false;
+    var hi = null, en = null;
+    voices.forEach(function (v) {
+      if (!hi && /^hi/i.test(v.lang)) hi = v;
+      if (!en && /^en[-_]IN/i.test(v.lang)) en = v;
+    });
+    var text, voice = null, lang;
+    if (hi) { text = dev; voice = hi; lang = hi.lang; }
+    else if (voices.length) { text = roman; voice = en; lang = en ? en.lang : 'en-IN'; }
+    else { text = dev; lang = 'hi-IN'; }
+    var u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.lang = lang;
+    u.rate = Math.min(1.5, .95 * st.speed); u.pitch = 1.1;
+    var token = ++st.utt;
+    var done = function () {
+      if (token !== st.utt) return;
+      st.speaking = false; st.rem = Math.min(st.rem, 450); talk(false);
+    };
+    u.onend = done; u.onerror = done;
+    st.speaking = true;
+    setTimeout(function () { if (token === st.utt && st.speaking) done(); }, 16000);
+    try { speechSynthesis.speak(u); } catch (e) { st.speaking = false; return false; }
+    return true;
+  };
+  var cap = function (r, d) {
+    var c = $('#cap');
+    c.textContent = r; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+    clearTimeout(talkT); talk(true);
+    var sp = speak(r, d || r);
+    if (!sp) talkT = setTimeout(function () { talk(false); }, Math.min(5000, 700 + r.length * 55));
+  };
+
+  /* step helpers: T = spoken step, A = silent visual step */
+  var T = function (r, d, fn, w) {
+    return [function () { cap(r, d); if (fn) fn(); }, w || Math.max(2000, r.length * 45)];
+  };
+  var A = function (fn, w) { return [fn, w || 700]; };
+
+  /* ---------- scene helpers ---------- */
+  var focusTk = function (id) {
+    $$('.big .tk').forEach(function (e) { var on = e.id === id; e.classList.toggle('on', on); e.classList.toggle('dim', !!id && !on); });
+  };
+  var nbCur = function (k) { $$('#nr .nb').forEach(function (e, j) { e.classList.toggle('cur', j === k); }); };
+  var stn = function (k) { $$('#tr3 .st').forEach(function (s, j) { s.classList.toggle('act', j === k); s.classList.toggle('done', j < k); }); };
+  var setW = function (w) { bump($('#v4'), w); $('#w4').style.height = (w / 3 * 100) + '%'; fx.splash(); };
+  var cond = function (w) {
+    var ok = w < 3, c = $('#cd4');
+    c.innerHTML = w + ' &lt; 3 ? <span class="' + (ok ? 'yes' : 'no') + '">' + (ok ? 'HAAN' : 'NAHI') + '</span>';
+    c.setAttribute('data-s', ok ? 'yes' : 'no');
+  };
+  var chip = function (k, cls, tag) {
+    var els = $$('#ch5 .chip');
+    els.forEach(function (e) { e.classList.remove('cur'); });
+    var e = els[k - 1]; e.classList.add(cls);
+    if (tag) e.setAttribute('data-tag', tag);
+  };
+
+  var quiz = function (title, lines, choices, right, okR, okD, badR, badD, askR, askD) {
+    return {
+      title: title, hold: true,
+      html: function () {
+        return '<div class="scene"><div class="q">Quick check: ye code kya print karega?</div>' + code('cq', lines) +
+          '<div class="opts" id="op">' + choices.map(function (t, j) {
+            return '<button class="opt" type="button" data-k="' + j + '"><b>' + 'ABC'.charAt(j) + '</b><span class="mono">' + esc(t) + '</span></button>';
+          }).join('') + '</div><div class="fb" id="fb"></div></div>';
+      },
+      init: function () {
+        $$('#op .opt').forEach(function (b) {
+          b.onclick = function () {
+            var k = +b.getAttribute('data-k'), o = $$('#op .opt');
+            o.forEach(function (x) { x.disabled = true; });
+            o[right].classList.add('right');
+            if (k !== right) o[k].classList.add('wrong');
+            $('#fb').textContent = k === right ? okR : badR;
+            if (k === right) { fx.success(); confetti(40); cap(okR, okD); } else { fx.wrong(); cap(badR, badD); }
+            st.idx = 99; st.hold = false; st.rem = 6500;
+          };
+        });
+      },
+      steps: [T(askR, askD, null, 1500)]
+    };
+  };
+
+  /* ---------- scenes ---------- */
+  var scenes = [
+    { title: 'Shuruaat',
+      html: function () {
+        return '<div class="scene s-title">' + mascot('big') + '<h1>Loops in Python</h1>' +
+          '<p class="sub">Ek kaam, baar baar. Computer kabhi thakta nahi.</p>' +
+          '<div class="tags"><span>for</span><span>while</span><span>break</span><span>continue</span></div></div>';
+      },
+      steps: [
+        T('Namaste dosto! Main hoon Loopy, aapka coding teacher.', 'नमस्ते दोस्तों! मैं हूँ लूपी, आपका कोडिंग टीचर।', function () { fx.hello(); }),
+        T('Aaj hum Loops seekhenge, bilkul shuru se. Pehle se kuch aana zaroori nahi.', 'आज हम लूप्स सीखेंगे, बिल्कुल शुरू से। पहले से कुछ आना ज़रूरी नहीं।'),
+        T('Loop ka matlab hai: ek kaam ko baar baar karna.', 'लूप का मतलब है, एक काम को बार बार करना।', function () { fx.pop(); }),
+        T('Chalo, shuru karte hain!', 'चलो, शुरू करते हैं!')
+      ] },
+
+    { title: 'Seedhiyan',
+      html: function () {
+        var h = [1, 2, 3, 4, 5].map(function (k) {
+          return '<div class="stp" style="height:' + (34 + k * 26) + 'px"><div class="ballw"><div class="bl hid" id="sb' + k + '"></div></div>' + k + '</div>';
+        }).join('');
+        return '<div class="scene"><div class="tag good">Roz ki zindagi ka loop</div><div class="stairs">' + h + '</div><div class="pill" id="cnt1">Seedhi: 0</div></div>';
+      },
+      steps: [
+        T('Socho aap seedhiyan chadh rahe ho. Ek ke baad ek.', 'सोचो आप सीढ़ियाँ चढ़ रहे हो। एक के बाद एक।'),
+        A(function () { show('#sb1'); $('#cnt1').textContent = 'Seedhi: 1'; fx.tick(1); }, 1000),
+        A(function () { show('#sb2'); $('#cnt1').textContent = 'Seedhi: 2'; fx.tick(2); }, 1000),
+        A(function () { show('#sb3'); $('#cnt1').textContent = 'Seedhi: 3'; fx.tick(3); }, 1000),
+        A(function () { show('#sb4'); $('#cnt1').textContent = 'Seedhi: 4'; fx.tick(4); }, 1000),
+        A(function () { show('#sb5'); $('#cnt1').textContent = 'Seedhi: 5'; fx.ding(2); }, 1200),
+        T('Har seedhi par wahi kaam: ek kadam upar. Baar baar!', 'हर सीढ़ी पर वही काम: एक क़दम ऊपर। बार बार!'),
+        T('Computer ko bhi ek kaam baar baar karwana hota hai. Isi ko loop kehte hain.', 'कंप्यूटर को भी एक काम बार बार करवाना होता है। इसी को लूप कहते हैं।', function () { fx.success(); })
+      ] },
+
+    { title: 'Loop kyun?',
+      html: function () {
+        var bad = [0, 1, 2, 3, 4].map(function () { return 'print("Hello")'; });
+        return '<div class="scene two"><div class="col"><div class="tag bad">Bina loop</div>' + code('c1a', bad, true) + '</div>' +
+          '<div class="col"><div class="tag good">Loop ke saath</div>' + code('c1b', ['for i in range(5):', '    print("Hello")'], true) +
+          '<div class="console hid" id="o1"><div class="hd">Output</div></div></div></div>';
+      },
+      steps: [
+        T('Maan lo teacher ne kaha: Hello paanch baar likho.', 'मान लो टीचर ने कहा: हेलो पाँच बार लिखो।'),
+        A(function () { show('#c1a .line:nth-child(1)'); fx.pop(); }, 700),
+        A(function () { show('#c1a .line:nth-child(2)'); fx.pop(); }, 700),
+        A(function () { show('#c1a .line:nth-child(3)'); fx.pop(); }, 700),
+        A(function () { show('#c1a .line:nth-child(4)'); fx.pop(); }, 700),
+        A(function () { show('#c1a .line:nth-child(5)'); fx.pop(); }, 900),
+        T('Ek hi cheez paanch baar likhna. Thaka dene wala kaam!', 'एक ही चीज़ पाँच बार लिखना। थका देने वाला काम!', function () { fx.wrong(); }),
+        T('Ab loop se likhte hain. Sirf do line!', 'अब लूप से लिखते हैं। सिर्फ़ दो लाइन!', function () { show('#c1b .line'); fx.whoosh(); }),
+        A(function () { show('#o1'); fx.pop(); }, 600),
+        A(function () { out('o1', 'Hello'); fx.ding(0); }, 600),
+        A(function () { out('o1', 'Hello'); fx.ding(1); }, 600),
+        A(function () { out('o1', 'Hello'); fx.ding(2); }, 600),
+        A(function () { out('o1', 'Hello'); fx.ding(3); }, 600),
+        A(function () { out('o1', 'Hello'); fx.ding(4); }, 900),
+        T('Computer baaki kaam khud kar dega. Hum bas ek baar bolte hain.', 'कंप्यूटर बाकी काम ख़ुद कर देगा। हम बस एक बार बोलते हैं।')
+      ] },
+
+    { title: 'for ka matlab',
+      html: function () {
+        return '<div class="scene"><div class="tag good">for loop ki line ko todkar samjho</div><div class="big">' +
+          '<div class="l1"><span class="tk" id="k-for" data-l="loop shuru karo"><span class="kw">for</span></span> ' +
+          '<span class="tk" id="k-i" data-l="counter dabba">i</span> ' +
+          '<span class="tk" id="k-in" data-l="mein se"><span class="kw">in</span></span> ' +
+          '<span class="tk" id="k-range" data-l="0 se 4 tak"><span class="fn">range</span>(<span class="num">5</span>)</span>' +
+          '<span class="tk" id="k-col" data-l="kaam shuru">:</span></div>' +
+          '<div class="l2"><span class="tk" id="k-ind" data-l="4 space andar" style="border-bottom:3px dotted var(--amber)">&nbsp;&nbsp;&nbsp;&nbsp;</span>' +
+          '<span class="tk" id="k-pr" data-l="baar baar chalegi"><span class="fn">print</span>(<span class="str">"Hello"</span>)</span></div></div></div>';
+      },
+      steps: [
+        T('Is line ko tukdon mein todkar samjhte hain.', 'इस लाइन को टुकड़ों में तोड़कर समझते हैं।', function () { fx.whoosh(); }),
+        T('for ka matlab hai: har ek ke liye. Isse loop shuru hota hai.', 'फॉर का मतलब है, हर एक के लिए। इससे लूप शुरू होता है।', function () { focusTk('k-for'); fx.pop(); }),
+        T('i ek chhota naam wala dabba hai. Har round mein ismein naya number aata hai.', 'आई एक छोटा नाम वाला डिब्बा है। हर राउंड में इसमें नया नंबर आता है।', function () { focusTk('k-i'); fx.pop(); }),
+        T('in ka matlab hai: mein se. Yani list mein se ek ek number lo.', 'इन का मतलब है, में से। यानी लिस्ट में से एक एक नंबर लो।', function () { focusTk('k-in'); fx.pop(); }),
+        T('range(5) deta hai 0, 1, 2, 3, 4. Yani paanch round.', 'रेंज पाँच देता है, ज़ीरो, एक, दो, तीन, चार। यानी पाँच राउंड।', function () { focusTk('k-range'); fx.pop(); }),
+        T('Colon ka matlab: ab loop ka kaam shuru hone wala hai.', 'कोलन का मतलब: अब लूप का काम शुरू होने वाला है।', function () { focusTk('k-col'); fx.pop(); }),
+        T('Andar ki taraf 4 space chhodo. Jo line andar hai, wahi baar baar chalegi.', 'अंदर की तरफ़ चार स्पेस छोड़ो। जो लाइन अंदर है, वही बार बार चलेगी।', function () { focusTk('k-ind'); fx.pop(); }),
+        T('Ye print wali line paanch baar chalegi, har baar Hello likhegi.', 'ये प्रिंट वाली लाइन पाँच बार चलेगी, हर बार हेलो लिखेगी।', function () { focusTk('k-pr'); fx.pop(); }),
+        T('Yaad rakho: for, i, in, range aur colon. Ye paanch cheezein for loop banati hain.', 'याद रखो: फॉर, आई, इन, रेंज और कोलन। ये पाँच चीज़ें फॉर लूप बनाती हैं।', function () { focusTk(''); fx.success(); })
+      ] },
+
+    { title: 'range()',
+      html: function () {
+        return '<div class="scene"><div class="pill">range(5)</div><div class="numrow" id="nr">' +
+          range(5).map(function (n) { return '<div class="nb hid" id="nb' + n + '">' + n + '</div>'; }).join('') +
+          '<div class="nb ghost hid" id="nb5">5</div></div>' +
+          '<div class="note hid" id="n2">Yahan ruk jao! 5 list mein nahi aata.</div></div>';
+      },
+      steps: [
+        T('range(5) ek number-line banata hai. Dekho kaise.', 'रेंज पाँच एक नंबर-लाइन बनाता है। देखो कैसे।', function () { fx.whoosh(); }),
+        A(function () { show('#nb0'); nbCur(0); fx.tick(0); }, 800),
+        A(function () { show('#nb1'); nbCur(1); fx.tick(1); }, 800),
+        A(function () { show('#nb2'); nbCur(2); fx.tick(2); }, 800),
+        A(function () { show('#nb3'); nbCur(3); fx.tick(3); }, 800),
+        A(function () { show('#nb4'); nbCur(4); fx.tick(4); }, 900),
+        T('Ye hain: 0, 1, 2, 3, 4. Total paanch number.', 'ये हैं: ज़ीरो, एक, दो, तीन, चार। कुल पाँच नंबर।', function () { nbCur(-1); fx.ding(1); }),
+        T('Dhyan do: ginti 0 se shuru hoti hai, 1 se nahi.', 'ध्यान दो: गिनती ज़ीरो से शुरू होती है, एक से नहीं।'),
+        T('5 tak nahi jata. 5 se pehle ruk jata hai.', 'पाँच तक नहीं जाता। पाँच से पहले रुक जाता है।', function () { show('#nb5'); show('#n2'); fx.thud(); })
+      ] },
+
+    { title: 'for chalta kaise',
+      html: function () {
+        return '<div class="scene two"><div class="col">' + code('c3', ['for i in range(3):', '    print("Hello", i)']) +
+          '<div class="track" id="tr3">' + range(3).map(function (n) { return '<div class="st">' + n + '</div>'; }).join('') + '</div></div>' +
+          '<div class="col"><div class="statebox"><span class="lbl">i ki value</span><span class="val" id="v3">?</span></div>' +
+          '<div class="console" id="o3"><div class="hd">Output</div></div></div></div>';
+      },
+      steps: [
+        T('Ab dekho computer is code ko kaise chalata hai. Ek ek line karke.', 'अब देखो कंप्यूटर इस कोड को कैसे चलाता है। एक एक लाइन करके।'),
+        T('Pehli line: i ki value 0 ho gayi. Ye hai Round 1.', 'पहली लाइन: आई की वैल्यू ज़ीरो हो गई। ये है राउंड एक।', function () { hl('c3', 0); stn(0); bump($('#v3'), '0'); fx.tick(0); }),
+        T('Ab andar ki line: print Hello 0 likhta hai.', 'अब अंदर की लाइन: प्रिंट, हेलो ज़ीरो लिखता है।', function () { hl('c3', 1); out('o3', 'Hello 0'); fx.ding(0); }),
+        T('Line khatam, computer wapas upar jata hai. Round 2: ab i ki value 1.', 'लाइन ख़त्म, कंप्यूटर वापस ऊपर जाता है। राउंड दो: अब आई की वैल्यू एक।', function () { hl('c3', 0); stn(1); bump($('#v3'), '1'); fx.tick(1); }),
+        T('print ne Hello 1 likha.', 'प्रिंट ने हेलो एक लिखा।', function () { hl('c3', 1); out('o3', 'Hello 1'); fx.ding(1); }, 2600),
+        T('Phir wapas upar! Round 3: i ki value 2.', 'फिर वापस ऊपर! राउंड तीन: आई की वैल्यू दो।', function () { hl('c3', 0); stn(2); bump($('#v3'), '2'); fx.tick(2); }),
+        T('print ne Hello 2 likha.', 'प्रिंट ने हेलो दो लिखा।', function () { hl('c3', 1); out('o3', 'Hello 2'); fx.ding(2); }, 2600),
+        T('Ab range(3) ke number khatam. Isliye loop band ho gaya.', 'अब रेंज तीन के नंबर ख़त्म। इसलिए लूप बंद हो गया।', function () {
+          hl('c3', 0);
+          $$('#tr3 .st').forEach(function (s) { s.classList.remove('act'); s.classList.add('done'); });
+          bump($('#v3'), 'khatam'); fx.success();
+        }),
+        T('Yaad rakho: for loop utni baar chalta hai jitne number range mein hain.', 'याद रखो: फॉर लूप उतनी बार चलता है जितने नंबर रेंज में हैं।', function () { hl('c3', -1); })
+      ] },
+
+    { title: 'while loop',
+      html: function () {
+        return '<div class="scene two"><div class="col">' +
+          code('c4', ['water = 0', 'while water < 3:', '    water = water + 1', '    print("Glass", water)']) +
+          '<div class="cond" id="cd4">shart check hogi</div></div>' +
+          '<div class="col"><div class="vis"><div class="glass"><div class="water" id="w4"></div></div>' +
+          '<div class="statebox"><span class="lbl">water</span><span class="val" id="v4">?</span></div></div>' +
+          '<div class="console" id="o4"><div class="hd">Output</div></div></div></div>';
+      },
+      steps: [
+        T('Ab while loop. Isme hum tab tak kaam karte hain jab tak shart sahi ho.', 'अब वाइल लूप। इसमें हम तब तक काम करते हैं जब तक शर्त सही हो।'),
+        T('Socho ek glass hai. Jab tak glass bhara nahi, paani daalte jao.', 'सोचो एक गिलास है। जब तक गिलास भरा नहीं, पानी डालते जाओ।'),
+        T('Shuru mein glass khali hai. water barabar 0.', 'शुरू में गिलास ख़ाली है। वॉटर बराबर ज़ीरो।', function () { hl('c4', 0); bump($('#v4'), '0'); fx.pop(); }),
+        T('Pehle shart check hoti hai: kya 0 chhota hai 3 se? Haan!', 'पहले शर्त चेक होती है: क्या ज़ीरो छोटा है तीन से? हाँ!', function () { hl('c4', 1); cond(0); fx.ding(0); }),
+        A(function () { hl('c4', 2); setW(1); }, 1500),
+        A(function () { hl('c4', 3); out('o4', 'Glass 1'); fx.ding(1); }, 1500),
+        T('Wapas upar. Phir shart check: 1 chhota hai 3 se? Haan, phir se!', 'वापस ऊपर। फिर शर्त चेक: एक छोटा है तीन से? हाँ, फिर से!', function () { hl('c4', 1); cond(1); fx.ding(0); }),
+        A(function () { hl('c4', 2); setW(2); }, 1500),
+        A(function () { hl('c4', 3); out('o4', 'Glass 2'); fx.ding(2); }, 1500),
+        T('Phir check: 2 chhota hai 3 se? Haan!', 'फिर चेक: दो छोटा है तीन से? हाँ!', function () { hl('c4', 1); cond(2); fx.ding(0); }),
+        A(function () { hl('c4', 2); setW(3); }, 1500),
+        A(function () { hl('c4', 3); out('o4', 'Glass 3'); fx.ding(3); }, 1500),
+        T('Ab check: kya 3 chhota hai 3 se? Nahi! Shart galat hui, isliye loop ruk gaya.', 'अब चेक: क्या तीन छोटा है तीन से? नहीं! शर्त ग़लत हुई, इसलिए लूप रुक गया।', function () { hl('c4', 1); cond(3); fx.thud(); }),
+        T('Dhyan rakho: agar water badhana bhool gaye, to loop kabhi nahi rukega. Ise infinite loop kehte hain.', 'ध्यान रखो: अगर वॉटर बढ़ाना भूल गए, तो लूप कभी नहीं रुकेगा। इसे इनफिनिट लूप कहते हैं।', function () { hl('c4', -1); fx.wrong(); })
+      ] },
+
+    { title: 'break / continue',
+      html: function () {
+        return '<div class="scene two"><div class="col">' +
+          code('c5', ['for n in range(1, 7):', '    if n == 3:', '        continue', '    if n == 5:', '        break', '    print(n)']) +
+          '</div><div class="col"><div class="numrow" id="ch5">' +
+          [1, 2, 3, 4, 5, 6].map(function (n) { return '<div class="chip">' + n + '</div>'; }).join('') +
+          '</div><div class="console" id="o5"><div class="hd">Output</div></div></div></div>';
+      },
+      steps: [
+        T('Loop ke andar do special hukum hote hain: continue aur break.', 'लूप के अंदर दो स्पेशल हुक्म होते हैं: कंटिन्यू और ब्रेक।'),
+        T('continue ka matlab: is baar ko chhodo, agle number par jao.', 'कंटिन्यू का मतलब: इस बार को छोड़ो, अगले नंबर पर जाओ।'),
+        T('break ka matlab: loop ko yahin rok do.', 'ब्रेक का मतलब: लूप को यहीं रोक दो।'),
+        T('Dekhte hain number 1 se 6 par.', 'देखते हैं एक से छह तक के नंबर पर।', function () { fx.whoosh(); }, 2200),
+        A(function () { chip(1, 'cur'); hl('c5', 0); fx.tick(0); }, 900),
+        A(function () { hl('c5', 5); chip(1, 'ok'); out('o5', '1'); fx.ding(0); }, 1100),
+        A(function () { chip(2, 'cur'); hl('c5', 0); fx.tick(1); }, 900),
+        A(function () { hl('c5', 5); chip(2, 'ok'); out('o5', '2'); fx.ding(1); }, 1100),
+        T('Number 3: shart sahi hai, to continue chalega.', 'नंबर तीन: शर्त सही है, तो कंटिन्यू चलेगा।', function () { chip(3, 'cur'); hl('c5', 1); fx.tick(2); }, 2400),
+        A(function () { hl('c5', 2); chip(3, 'skip', 'chhodo'); fx.boing(); }, 1500),
+        A(function () { chip(4, 'cur'); hl('c5', 0); fx.tick(3); }, 900),
+        A(function () { hl('c5', 5); chip(4, 'ok'); out('o5', '4'); fx.ding(3); }, 1100),
+        T('Number 5: yahan break chalega.', 'नंबर पाँच: यहाँ ब्रेक चलेगा।', function () { chip(5, 'cur'); hl('c5', 3); fx.tick(4); }, 2200),
+        A(function () { hl('c5', 4); chip(5, 'stop', 'ruk!'); $$('#ch5 .chip')[5].classList.add('dim'); fx.thud(); }, 1500),
+        T('Isliye output sirf 1, 2, 4. 3 chhut gaya, aur 5 par loop ruk gaya.', 'इसलिए आउटपुट सिर्फ़ एक, दो, चार। तीन छूट गया, और पाँच पर लूप रुक गया।', function () { hl('c5', -1); fx.success(); })
+      ] },
+
+    quiz('Quick check 1', ['for i in range(3):', '    print(i)'], ['1 2 3', '0 1 2', '0 1 2 3'], 1,
+      'Sahi! range(3) 0, 1, 2 deta hai. 3 se pehle ruk jata hai.', 'सही! रेंज तीन, ज़ीरो, एक, दो देता है। तीन से पहले रुक जाता है।',
+      'Thoda sa chuk gaye. range(3) 0 se shuru hota hai, to jawab 0 1 2 hai.', 'थोड़ा सा चूक गए। रेंज तीन, ज़ीरो से शुरू होता है, तो जवाब ज़ीरो एक दो है।',
+      'Ab aapki baari! Ye code kya print karega? Soch ke jawab chuno.', 'अब आपकी बारी! ये कोड क्या प्रिंट करेगा? सोचकर जवाब चुनो।'),
+
+    quiz('Quick check 2', ['x = 1', 'while x < 4:', '    print(x)', '    x = x + 1'], ['1 2 3', '1 2 3 4', 'Kabhi nahi rukega'], 0,
+      'Sahi! x 1, 2, 3 par print hota hai. x 4 hote hi shart galat ho jati hai.', 'सही! x एक, दो, तीन पर प्रिंट होता है। x चार होते ही शर्त ग़लत हो जाती है।',
+      'Kareeb! Jab x 4 hota hai, 4 < 4 galat hai, isliye 4 print nahi hota. Jawab 1 2 3.', 'क़रीब! जब x चार होता है, तो चार छोटा है चार से, ये ग़लत है, इसलिए चार प्रिंट नहीं होता। जवाब एक दो तीन।',
+      'Ek aur sawal! Ye while loop kya print karega?', 'एक और सवाल! ये वाइल लूप क्या प्रिंट करेगा?'),
+
+    { title: 'Yaad rakho',
+      html: function () {
+        var c = [
+          ['for loop', 'Jab pata ho kitni baar chalana hai.', 'for i in range(3):'],
+          ['while loop', 'Jab tak shart sahi, tab tak chalao.', 'while water < 3:'],
+          ['range(n)', '0 se shuru, n se pehle ruk jao.', 'range(5) = 0 1 2 3 4'],
+          ['break / continue', 'continue: is baar chhodo. break: loop rok do.', 'break  continue']
+        ];
+        return '<div class="scene"><div class="cards">' + c.map(function (x, k) {
+          return '<div class="card hid" id="cd' + k + '"><h3>' + x[0] + '</h3><p>' + x[1] + '</p><code>' + esc(x[2]) + '</code></div>';
+        }).join('') + '</div>' +
+          '<div class="fin hid" id="fin7"><strong>Shabash! Ab khud try karo.</strong>' +
+          '<a class="btn primary" href="https://python-concept-experience-challenge.vercel.app/" target="_blank" rel="noopener">Loop Lab kholo</a></div></div>';
+      },
+      steps: [
+        T('Chalo, ek baar phir yaad karte hain.', 'चलो, एक बार फिर याद करते हैं।'),
+        T('for loop: jab pata ho ki kitni baar chalana hai.', 'फॉर लूप: जब पता हो कि कितनी बार चलाना है।', function () { show('#cd0'); fx.pop(); }),
+        T('while loop: jab tak shart sahi ho, tab tak chalao.', 'वाइल लूप: जब तक शर्त सही हो, तब तक चलाओ।', function () { show('#cd1'); fx.pop(); }),
+        T('range(n): 0 se shuru hokar n se pehle ruk jata hai.', 'रेंज एन: ज़ीरो से शुरू होकर एन से पहले रुक जाता है।', function () { show('#cd2'); fx.pop(); }),
+        T('continue chhodta hai aur break loop rok deta hai.', 'कंटिन्यू छोड़ता है और ब्रेक लूप रोक देता है।', function () { show('#cd3'); fx.pop(); }),
+        T('Shabash dosto! Ab Loop Lab mein khud code likhkar try karo. Phir milte hain!', 'शाबाश दोस्तों! अब लूप लैब में ख़ुद कोड लिखकर ट्राई करो। फिर मिलते हैं!', function () { show('#fin7'); fx.success(); confetti(80); }, 5000)
+      ] }
+  ];
+
+  /* ---------- player engine ---------- */
+  var go = function (i) {
+    var s = scenes[i];
+    st.i = i; st.idx = 0; st.rem = 0; st.hold = !!s.hold; st.ended = false;
+    seen[i] = true;
+    $('#stage').innerHTML = s.html();
+    $('#fill').style.width = '0%';
+    if (s.init) s.init();
+    ui();
+  };
+  var ui = function () {
+    $$('#dots .dot').forEach(function (d, k) {
+      d.classList.toggle('active', k === st.i);
+      d.classList.toggle('seen', !!seen[k]);
+    });
+    $('#lab').textContent = 'Scene ' + (st.i + 1) + ' / ' + scenes.length + ' · ' + scenes[st.i].title;
+    $('#play').textContent = st.ended ? 'Replay' : (st.playing ? 'Pause' : 'Play');
+  };
+  var tick = function () {
+    if (!st.playing || st.speaking) return;
+    if (st.rem > 0) { st.rem -= 50 * st.speed; if (st.rem > 0) return; }
+    var s = scenes[st.i];
+    if (st.idx < s.steps.length) {
+      var step = s.steps[st.idx++];
+      st.rem = step[1];
+      step[0]();
+      $('#fill').style.width = Math.min(100, st.idx / s.steps.length * 100) + '%';
+    } else if (!st.hold) {
+      if (st.i < scenes.length - 1) { fx.whoosh(); go(st.i + 1); }
+      else { st.playing = false; st.ended = true; stopSpeech(); ui(); }
+    }
+  };
+  var begin = function () {
+    initAudio(); musicStart();
+    $('#start').hidden = true;
+    st.started = true; st.playing = true; st.ended = false;
+    go(0);
+  };
+  var nav = function (i) {
+    if (!st.started) { begin(); return; }
+    i = Math.max(0, Math.min(scenes.length - 1, i));
+    stopSpeech(); st.playing = true; fx.whoosh(); go(i);
+  };
+  var toggle = function () {
+    if (!st.started) { begin(); return; }
+    if (st.ended) { st.ended = false; st.playing = true; go(0); return; }
+    st.playing = !st.playing;
+    if (!st.playing) stopSpeech();
+    ui();
+  };
+
+  $('#dots').innerHTML = scenes.map(function (s, k) {
+    return '<button class="dot" type="button" data-i="' + k + '"><span class="n">' + (k + 1) + '</span><span>' + s.title + '</span></button>';
+  }).join('');
+  $$('#dots .dot').forEach(function (d) { d.onclick = function () { nav(+d.getAttribute('data-i')); }; });
+  $('#go').onclick = begin;
+  $('#prev').onclick = function () { nav(st.i - 1); };
+  $('#next').onclick = function () { nav(st.i + 1); };
+  $('#play').onclick = toggle;
+  $('#speed').onclick = function () {
+    var order = [1, 1.25, 1.5, 0.75];
+    st.speed = order[(order.indexOf(st.speed) + 1) % order.length];
+    this.textContent = st.speed + '×';
+  };
+  var flip = function (id, key, after) {
+    $(id).onclick = function () {
+      opts[key] = !opts[key];
+      this.setAttribute('aria-pressed', opts[key] ? 'true' : 'false');
+      if (after) after();
+    };
+  };
+  flip('#tvoice', 'voice', function () { if (!opts.voice) stopSpeech(); });
+  flip('#tsfx', 'sfx');
+  flip('#tmus', 'music');
+  $('#full').onclick = function () {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else { var p = $('#player').requestFullscreen(); if (p && p.catch) p.catch(function () {}); }
+    } catch (e) {}
+  };
+  document.addEventListener('keydown', function (e) {
+    var tag = e.target && e.target.tagName;
+    if (e.key === 'ArrowRight') nav(st.i + 1);
+    else if (e.key === 'ArrowLeft') nav(st.i - 1);
+    else if (e.key === ' ' && tag !== 'BUTTON' && tag !== 'A') { e.preventDefault(); toggle(); }
+  });
+
+  go(0);
+  ui();
+  setInterval(tick, 50);
+})();
+</script>
+
+</body></html>

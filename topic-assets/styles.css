@@ -93,3 +93,15 @@ body{background:radial-gradient(ellipse at 8% 0%,rgba(215,240,224,.58),transpare
 
 /* Home icon used by the brand link. */
 .brandmark svg,.mark svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+
+/* Expandable reference animations for selected topics. */
+.lesson-animation{margin:0 0 22px;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+.lesson-animation summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;font:700 14px Manrope,sans-serif;color:var(--ink)}
+.lesson-animation summary::-webkit-details-marker{display:none}
+.lesson-animation summary:after{content:'＋';color:var(--green);font:700 18px 'DM Mono',monospace}
+.lesson-animation[open] summary:after{content:'−'}
+.lesson-animation summary:hover{background:#f3f7f0}
+.lesson-animation .animation-meta{font:10px 'DM Mono',monospace;color:var(--muted);margin-left:auto;text-align:right}
+.lesson-animation iframe{display:block;width:100%;height:1000px;border:0;background:#0e1a26}
+@media(max-width:560px){.lesson-animation summary{align-items:flex-start;flex-wrap:wrap;padding:15px}.lesson-animation .animation-meta{width:100%;margin-left:0;text-align:left}.lesson-animation iframe{height:1120px}}
