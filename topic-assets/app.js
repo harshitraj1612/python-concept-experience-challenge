@@ -350,6 +350,7 @@
     if (timer !== null) { pause(); start(); }
   });
 
+  let _quizAnswered = false;
   document.querySelectorAll('.answer').forEach(button => button.addEventListener('click', () => {
     const correct = Number(button.dataset.index) === topic.quiz[2];
     document.querySelectorAll('.answer').forEach(option => option.classList.remove('correct', 'wrong'));
@@ -357,6 +358,10 @@
     $('feedback').textContent = `${correct ? 'Correct.' : 'Not quite.'} ${topic.quiz[3]}`;
     $('feedback').classList.toggle('wrong', !correct);
     $('feedback').classList.toggle('correct', correct);
+    if (!_quizAnswered && window.LoopLabAI) {
+      _quizAnswered = true;
+      window.LoopLabAI.recordAnswer(id, correct ? 1 : 0, 1);
+    }
   }));
 
   render();
