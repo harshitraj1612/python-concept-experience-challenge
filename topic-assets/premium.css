@@ -1432,3 +1432,31 @@ h1 em { font-style: normal; color: var(--green); }
   .ll-snk-layout { grid-template-columns: 1fr; }
   .ll-snk-board-wrap { max-width: 360px; }
 }
+
+/* Modal close button */
+.ll-modal {
+  position: relative;
+}
+.ll-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,0.04);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all var(--dur-fast);
+  z-index: 2;
+}
+.ll-modal-close:hover {
+  background: rgba(0,0,0,0.09);
+  color: var(--ink);
+  transform: scale(1.05);
+}

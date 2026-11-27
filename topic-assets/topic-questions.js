@@ -282,6 +282,26 @@
     if (window.LoopLabAI) {
       window.LoopLabAI.recordAnswer(topicId, correctCount, total);
     }
+
+    // Auto-update topic completion when score is passing (>= 50%)
+    if (pct >= 50) {
+      try {
+        const COMP_KEY = 'loop-lab-completed-topics';
+        const raw = localStorage.getItem(COMP_KEY);
+        const compList = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(compList) && !compList.includes(topicId)) {
+          compList.push(topicId);
+          localStorage.setItem(COMP_KEY, JSON.stringify(compList));
+          const pc = document.getElementById('pathCompletion');
+          if (pc) pc.textContent = `${compList.length} / 25 completed`;
+          const activeMarker = document.querySelector('.topic-menu a.active .topic-marker');
+          if (activeMarker) {
+            activeMarker.textContent = '✓';
+            activeMarker.setAttribute('aria-label', 'Completed');
+          }
+        }
+      } catch (e) {}
+    }
   }
 
   // Replace single-question quiz with multi-question version

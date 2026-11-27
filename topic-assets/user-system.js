@@ -83,6 +83,7 @@
     overlay.setAttribute('aria-label', 'Create your profile or sign in');
     overlay.innerHTML = `
 <div class="ll-modal" id="llModal">
+  <button class="ll-modal-close" id="llModalClose" type="button" aria-label="Close dialog as guest">✕</button>
   <div class="ll-modal-logo">
     <span class="ll-logo-mark">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></svg>
@@ -267,6 +268,19 @@
       }
     });
 
+    const modalClose = $('llModalClose');
+    if (modalClose) {
+      modalClose.addEventListener('click', () => $('llGuestBtn').click());
+    }
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape' && document.getElementById('llUserOverlay')) {
+        $('llGuestBtn').click();
+        window.removeEventListener('keydown', onKeyDown);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
     overlay.addEventListener('click', e => {
       if (e.target === overlay) $('llGuestBtn').click();
     });
@@ -310,8 +324,13 @@
         <button class="ll-menu-item ll-menu-danger" id="llMenuSignout" role="menuitem">Sign Out</button>
       </div>`;
 
-    const topbar = document.querySelector('.topbar, .nav');
-    if (topbar) topbar.appendChild(wrap);
+    const links = document.querySelector('.links');
+    if (links) {
+      links.appendChild(wrap);
+    } else {
+      const topbar = document.querySelector('.topbar, .nav');
+      if (topbar) topbar.appendChild(wrap);
+    }
 
     const btn  = $('llAvatarBtn');
     const menu = $('llAvatarMenu');

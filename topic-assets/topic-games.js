@@ -365,6 +365,23 @@
 
     canvas = document.getElementById('runnerCanvas');
     ctx = canvas.getContext('2d');
+
+    // Polyfill roundRect for maximum browser/device compatibility
+    if (!ctx.roundRect) {
+      ctx.roundRect = function(x, y, w, h, r) {
+        if (typeof r === 'undefined') r = 0;
+        if (typeof r === 'number') r = [r, r, r, r];
+        const rad = Math.min(r[0] || 0, Math.abs(w) / 2, Math.abs(h) / 2);
+        this.beginPath();
+        this.moveTo(x + rad, y);
+        this.arcTo(x + w, y, x + w, y + h, rad);
+        this.arcTo(x + w, y + h, x, y + h, rad);
+        this.arcTo(x, y + h, x, y, rad);
+        this.arcTo(x, y, x + w, y, rad);
+        this.closePath();
+        return this;
+      };
+    }
     document.getElementById('runHighScore').textContent = runnerHighScore;
 
     // Controls
@@ -382,9 +399,22 @@
       }
     });
 
-    document.getElementById('ctrlLeft').addEventListener('click', () => moveLane(-1));
-    document.getElementById('ctrlRight').addEventListener('click', () => moveLane(1));
-    document.getElementById('ctrlJump').addEventListener('click', triggerJump);
+    const cLeft = document.getElementById('ctrlLeft');
+    const cRight = document.getElementById('ctrlRight');
+    const cJump = document.getElementById('ctrlJump');
+
+    const handleLeft = (e) => { e.preventDefault(); moveLane(-1); };
+    const handleRight = (e) => { e.preventDefault(); moveLane(1); };
+    const handleJump = (e) => { e.preventDefault(); triggerJump(); };
+
+    cLeft.addEventListener('click', handleLeft);
+    cLeft.addEventListener('touchstart', handleLeft, { passive: false });
+
+    cRight.addEventListener('click', handleRight);
+    cRight.addEventListener('touchstart', handleRight, { passive: false });
+
+    cJump.addEventListener('click', handleJump);
+    cJump.addEventListener('touchstart', handleJump, { passive: false });
 
     // Swipe controls for mobile
     let touchStartX = 0;
