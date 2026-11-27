@@ -67,14 +67,36 @@
   $('code').innerHTML = topic.code.map((line, index) => `<div class="code-line" data-line="${index}"><span class="ln">${index + 1}</span><span class="src">${highlight(line)}</span></div>`).join('');
   $('codeEditor').value = codeSource;
 
-  $('editToggle').addEventListener('click', () => {
-    const editing = $('editorWrap').hidden;
-    $('editorWrap').hidden = !editing;
-    $('code').hidden = editing;
-    $('codeHint').textContent = editing ? 'Edit the example, then compile it with Python.' : 'Current line highlights as the program runs';
-    $('editToggle').textContent = editing ? 'Preview code' : 'Edit code';
-    $('editToggle').setAttribute('aria-expanded', String(editing));
-  });
+  const editToggleBtn = $('editToggle');
+  if (editToggleBtn) {
+    const codeTabs = document.createElement('div');
+    codeTabs.className = 'll-code-tabs';
+    codeTabs.setAttribute('role', 'tablist');
+    codeTabs.setAttribute('aria-label', 'Code view tabs');
+    codeTabs.innerHTML = `
+      <button type="button" class="ll-code-tab active" id="tabCodePreview" role="tab" aria-selected="true">👁 Preview</button>
+      <button type="button" class="ll-code-tab" id="tabCodeEdit" role="tab" aria-selected="false">✏️ Edit Code</button>
+    `;
+    editToggleBtn.parentNode.replaceChild(codeTabs, editToggleBtn);
+
+    const btnPrev = $('tabCodePreview');
+    const btnEdit = $('tabCodeEdit');
+
+    function setCodeMode(isEditing) {
+      $('editorWrap').hidden = !isEditing;
+      $('code').hidden = isEditing;
+      $('codeHint').textContent = isEditing
+        ? 'Edit the example, then compile it with Python or run it in your browser.'
+        : 'Current line highlights as the program runs';
+      btnPrev.classList.toggle('active', !isEditing);
+      btnEdit.classList.toggle('active', isEditing);
+      btnPrev.setAttribute('aria-selected', String(!isEditing));
+      btnEdit.setAttribute('aria-selected', String(isEditing));
+    }
+
+    btnPrev.addEventListener('click', () => setCodeMode(false));
+    btnEdit.addEventListener('click', () => setCodeMode(true));
+  }
 
   $('resetCode').addEventListener('click', () => {
     $('codeEditor').value = codeSource;
@@ -362,6 +384,16 @@
       window.LoopLabAI.recordAnswer(id, correct ? 1 : 0, 1);
     }
   }));
+
+  const topicNav = $('topicNav');
+  if (topicNav) {
+    document.addEventListener('click', e => {
+      if (!topicNav.contains(e.target)) topicNav.removeAttribute('open');
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && topicNav.hasAttribute('open')) topicNav.removeAttribute('open');
+    });
+  }
 
   render();
 })();

@@ -167,6 +167,21 @@
     tabs.guest.addEventListener('click', () => switchTab('guest'));
     tabs.owner.addEventListener('click', () => switchTab('owner'));
 
+    const tabKeys = ['sign', 'guest', 'owner'];
+    tabKeys.forEach((key, idx) => {
+      tabs[key].addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+          const nextKey = tabKeys[(idx + 1) % tabKeys.length];
+          tabs[nextKey].focus();
+          switchTab(nextKey);
+        } else if (e.key === 'ArrowLeft') {
+          const prevKey = tabKeys[(idx - 1 + tabKeys.length) % tabKeys.length];
+          tabs[prevKey].focus();
+          switchTab(prevKey);
+        }
+      });
+    });
+
     /* — Sign-up tab — */
     const nameInput = $('llNameInput');
     const nameHint  = $('llNameHint');
@@ -200,10 +215,11 @@
 
     /* — Guest tab — */
     $('llGuestBtn').addEventListener('click', () => {
-      const num = Math.floor(Math.random() * 9000) + 1000;
-      user = { guestName: `${GUEST_PREFIX}${num}`, createdAt: Date.now() };
+      let gName = (user && user.guestName) ? user.guestName : `${GUEST_PREFIX}${Math.floor(Math.random() * 9000) + 1000}`;
+      user = { guestName: gName, isGuest: true, createdAt: Date.now() };
       isGuest = true; isOwner = false;
       scores = {};
+      store(USER_KEY, user); // Persist guest session so page refresh preserves state!
       closeModal(overlay);
       renderAvatar();
     });
@@ -355,9 +371,10 @@
 
     const signoutBtn = $('llMenuSignout');
     if (signoutBtn) signoutBtn.addEventListener('click', () => {
-      if (!isGuest) {
-        try { localStorage.removeItem(USER_KEY); localStorage.removeItem(SCORES_KEY); } catch {}
-      }
+      try {
+        localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(SCORES_KEY);
+      } catch {}
       user = null; isGuest = false; isOwner = false; scores = {};
       wrap.remove();
       injectModal();
@@ -526,13 +543,13 @@
       isOwner = true; isGuest = false;
       scores = load(SCORES_KEY) || {};
       renderAvatar();
-    } else if (user && user.name) {
+    } else if (user && user.name && !user.isGuest) {
       isGuest = false; isOwner = false;
       scores = load(SCORES_KEY) || {};
       renderAvatar();
-    } else if (user && user.guestName) {
+    } else if (user && (user.guestName || user.isGuest)) {
       isGuest = true; isOwner = false;
-      scores = {};
+      scores = {}; // in-memory session only
       renderAvatar();
     } else {
       injectModal();

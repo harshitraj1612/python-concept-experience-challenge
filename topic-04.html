@@ -1,5 +1,19 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f4ef"><title>Python Topic — Loop Lab</title><link rel="stylesheet" href="topic-assets/styles.css">
+<html lang="en"><head>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('looplab_theme');
+    if (!t) {
+      var q = localStorage.getItem('loop_quest_prefs_v1');
+      if (q) { var p = JSON.parse(q); t = p.theme; }
+    }
+    if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  } catch(e){}
+})();
+</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f4ef"><title>Python Topic — Loop Lab</title><link rel="stylesheet" href="topic-assets/styles.css">
 <link rel="stylesheet" href="topic-assets/premium.css"></head>
 <body data-topic="04"><div class="wrap">
 <header class="topbar"><a class="brand" href="index.html"><span class="brandmark"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></svg></span> loop lab</a><a href="https://harshitraj1612.github.io/game.html/" class="ll-game-btn" title="Loop Quest — Python arcade" target="_blank" rel="noopener" aria-label="Play Loop Quest game"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 11h.01M18 11h.01M16.5 13h.01"/></svg>Play Loop Quest</a><div class="topmeta">Python concept → experience</div><div class="navwrap"><details class="topic-nav" id="topicNav"><summary>Switch topic</summary><nav class="topic-menu" id="topicMenu" aria-label="All Python topics"></nav></details></div></header>
@@ -13,4 +27,5 @@
 <script src="topic-assets/ai-coach.js"></script><script src="topic-assets/beginner-guide.js"></script>
 <script src="topic-assets/topic-games.js"></script>
 <script src="topic-assets/topic-questions.js"></script>
+<script src="topic-assets/theme.js"></script>
 </body></html>

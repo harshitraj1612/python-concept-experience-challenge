@@ -156,24 +156,20 @@
   const panelSnake = document.getElementById('panelSnake');
   const panelRunner = document.getElementById('panelRunner');
 
-  tabSnake.addEventListener('click', () => {
-    tabSnake.classList.add('active');
-    tabRunner.classList.remove('active');
-    tabSnake.setAttribute('aria-selected', 'true');
-    tabRunner.setAttribute('aria-selected', 'false');
-    panelSnake.hidden = false;
-    panelRunner.hidden = true;
-  });
+  const switchTabs = (toRunner) => {
+    tabSnake.classList.toggle('active', !toRunner);
+    tabRunner.classList.toggle('active', toRunner);
+    tabSnake.setAttribute('aria-selected', String(!toRunner));
+    tabRunner.setAttribute('aria-selected', String(toRunner));
+    panelSnake.hidden = toRunner;
+    panelRunner.hidden = !toRunner;
+    if (toRunner) initRunnerCanvas();
+  };
 
-  tabRunner.addEventListener('click', () => {
-    tabRunner.classList.add('active');
-    tabSnake.classList.remove('active');
-    tabRunner.setAttribute('aria-selected', 'true');
-    tabSnake.setAttribute('aria-selected', 'false');
-    panelRunner.hidden = false;
-    panelSnake.hidden = true;
-    initRunnerCanvas();
-  });
+  tabSnake.addEventListener('click', () => switchTabs(false));
+  tabRunner.addEventListener('click', () => switchTabs(true));
+  tabSnake.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { tabRunner.focus(); switchTabs(true); } });
+  tabRunner.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { tabSnake.focus(); switchTabs(false); } });
 
   /* ═════════════════════════════════════════════════════════════
      1. SNAKES & LADDERS ENGINE (6x6 = 36 tiles)
