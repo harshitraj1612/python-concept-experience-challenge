@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop Lab Game</title>
+<style>
+  :root{--bg:#f5f4ef;--card:#fffdf8;--ink:#1d2433;--mute:#6b7280;--line:#dcd8cc;--accent:#0f766e;--accent-soft:#d5ece9;--good:#15803d;--bad:#b91c1c;--code:#16202e}
+  [data-theme="dark"]{--bg:#0e1522;--card:#172033;--ink:#e6edf3;--mute:#9aa6b8;--line:#2a3649;--accent:#2dd4bf;--accent-soft:#143b3a;--good:#4ade80;--bad:#f87171;--code:#0a1020}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+  header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
+  header a{color:var(--accent);text-decoration:none;font-weight:600}
+  .theme-btn{background:none;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit}
+  main{max-width:720px;margin:0 auto;padding:28px 20px 56px}
+  h1{font-family:Georgia,serif;font-size:1.9rem;margin:0 0 6px}
+  .sub{color:var(--mute);margin:0 0 22px;line-height:1.55}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .stat{flex:1 1 90px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--bg)}
+  .stat small{display:block;color:var(--mute);font-size:.75rem}
+  .stat b{font-size:1.1rem}
+  .bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+  .timer i{background:#b45309;transition:width .1s linear}
+  .qno{font-size:.85rem;color:var(--mute);margin:12px 0 4px}
+  .q{font-family:Georgia,serif;font-size:1.25rem;line-height:1.35;margin:0 0 12px}
+  pre{background:var(--code);color:#e6edf3;border-radius:10px;padding:14px 16px;overflow-x:auto;margin:0 0 14px;font:.92rem/1.55 ui-monospace,Menlo,Consolas,monospace}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .opt{display:flex;gap:10px;text-align:left;font:inherit;color:inherit;cursor:pointer;background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px}
+  .opt:hover:not(:disabled){border-color:var(--accent)}
+  .opt:focus-visible,.btn:focus-visible,.theme-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .opt kbd{font:600 .8rem ui-monospace,Menlo,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;height:fit-content}
+  .opt code{font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
+  .opt.right{border-color:var(--good);background:rgba(21,128,61,.12)}
+  .opt.wrong{border-color:var(--bad);background:rgba(185,28,28,.12)}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--accent-soft);line-height:1.5}
+  .fb b{display:block;margin-bottom:2px}
+  .btn{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:10px;padding:12px 22px;background:var(--accent);color:#fff;margin-top:14px}
+  .center{text-align:center;padding:12px 0}
+  .big{font-size:3rem;margin:4px 0}
+  [hidden]{display:none!important}
+  @media(max-width:560px){.opts{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">↻ Loop Lab</a>
+  <button class="theme-btn" id="theme" aria-label="Switch dark and light theme">🌙 Dark</button>
+</header>
+
+<main>
+  <h1>Loop Lab Game</h1>
+  <p class="sub">Predict what each Python loop prints. You have 3 lives and 20 seconds per question. Wrong answers and time-outs cost a life, and the explanation after each answer shows why.</p>
+
+  <div class="card">
+    <div id="start" class="center">
+      <div class="big" aria-hidden="true">🔁</div>
+      <p>Topics: <code>for</code>, <code>while</code>, <code>range()</code>, <code>break</code>, <code>continue</code>, nested loops and <code>for…else</code>.</p>
+      <p id="best" class="sub" style="margin:0 auto"></p>
+      <button class="btn" id="go">Start game</button>
+    </div>
+
+    <div id="play" hidden>
+      <div class="stats">
+        <div class="stat"><small>Score</small><b id="score">0</b></div>
+        <div class="stat"><small>Streak</small><b id="streak">0</b></div>
+        <div class="stat"><small>Lives</small><b id="lives">❤️❤️❤️</b></div>
+      </div>
+      <div class="bar"><i id="prog"></i></div>
+      <div class="bar timer"><i id="time"></i></div>
+      <p class="qno" id="qno"></p>
+      <p class="q" id="q"></p>
+      <pre><code id="code"></code></pre>
+      <div class="opts" id="opts" role="group" aria-label="Answer choices"></div>
+      <div class="fb" id="fb" role="status" aria-live="polite" hidden></div>
+      <button class="btn" id="next" hidden>Next question</button>
+    </div>
+
+    <div id="end" class="center" hidden>
+      <div class="big" id="endicon"></div>
+      <h2 id="endtitle" style="font-family:Georgia,serif;margin:0 0 6px"></h2>
+      <p id="endtxt" class="sub" style="margin:0 auto"></p>
+      <button class="btn" id="again">Play again</button>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+  // ---- Questions: edit or add here. Each has q (prompt), code, o (4 options), a (index of correct option), e (explanation)
+  var QUESTIONS=[
+    {q:"What does this print?",code:"for i in range(3):\n    print(i)",o:["0 1 2","1 2 3","0 1 2 3","3 2 1"],a:0,
+     e:"range(3) starts at 0 and stops before 3, so i takes 0, 1 and 2."},
+    {q:"Which numbers does this loop produce?",code:"for n in range(2, 10, 3):\n    print(n)",o:["2 5 8","2 5 8 11","3 6 9","2 4 6 8"],a:0,
+     e:"Start at 2, add 3 each time: 2, 5, 8. The next value 11 is past the stop value 10."},
+    {q:"What is the final value printed?",code:"x = 1\nwhile x < 20:\n    x *= 2\nprint(x)",o:["16","20","32","64"],a:2,
+     e:"x goes 1, 2, 4, 8, 16, 32. At 32 the condition 32 < 20 is false, so the loop stops."},
+    {q:"What does this print?",code:"for i in range(5):\n    if i == 3:\n        break\n    print(i)",o:["0 1 2","0 1 2 3","0 1 2 4","3"],a:0,
+     e:"break exits the loop as soon as i is 3, before print runs for that value."},
+    {q:"What does this print?",code:"for i in range(5):\n    if i % 2 == 0:\n        continue\n    print(i)",o:["0 2 4","1 3","1 2 3 4","0 1 2 3 4"],a:1,
+     e:"continue skips even numbers, so only 1 and 3 are printed."},
+    {q:"How many times does print run?",code:"for i in range(2):\n    for j in range(3):\n        print(i, j)",o:["5","6","3","2"],a:1,
+     e:"The inner loop runs 3 times for each of the 2 outer iterations: 2 × 3 = 6."},
+    {q:"What is printed at the end?",code:"total = 0\nfor n in [1, 2, 3, 4]:\n    total += n\nprint(total)",o:["4","6","10","24"],a:2,
+     e:"total builds up as 1, 3, 6, 10. The print is outside the loop, so only 10 appears."},
+    {q:"Which loop never stops?",code:"# Loop A\ni = 0\nwhile i < 3:\n    print(i)\n\n# Loop B\nfor i in range(3):\n    print(i)",o:["Loop A","Loop B","Both","Neither"],a:0,
+     e:"In loop A, i never changes, so i < 3 stays true forever. Add i += 1 inside the loop to fix it."},
+    {q:"What does this print?",code:"for i in range(3):\n    if i == 5:\n        break\nelse:\n    print(\"done\")",o:["Nothing","done","done done done","An error"],a:1,
+     e:"The else block of a loop runs when the loop ends without break. Here i is never 5, so done is printed once."},
+    {q:"What does this print?",code:"print(len(range(1, 10, 2)))",o:["4","5","9","10"],a:1,
+     e:"range(1, 10, 2) gives 1, 3, 5, 7, 9. That is 5 numbers."}
+  ];
+  var TIME=20,KEY="loopLabBest",THEME="loopLabTheme";
+  var $=function(id){return document.getElementById(id)};
+  var st={},order=[],timer=null,left=TIME;
+
+  // Theme: remember the choice, default to the system setting
+  function applyTheme(t){document.documentElement.setAttribute("data-theme",t);
+    $("theme").textContent=t==="dark"?"☀️ Light":"🌙 Dark"}
+  var saved=null;try{saved=localStorage.getItem(THEME)}catch(e){}
+  applyTheme(saved||(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"));
+  $("theme").addEventListener("click",function(){
+    var t=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
+    applyTheme(t);try{localStorage.setItem(THEME,t)}catch(e){}
+  });
+
+  function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+  function best(){try{return +localStorage.getItem(KEY)||0}catch(e){return 0}}
+  function saveBest(v){try{localStorage.setItem(KEY,v)}catch(e){}}
+  function show(id){["start","play","end"].forEach(function(x){$(x).hidden=(x!==id)})}
+  function hearts(){return st.lives>0?new Array(st.lives+1).join("❤️"):"💔"}
+  function hud(){$("score").textContent=st.score;$("streak").textContent=st.streak;$("lives").textContent=hearts();
+    $("prog").style.width=(st.i/order.length*100)+"%"}
+
+  function start(){st={i:0,score:0,streak:0,lives:3,locked:false};order=shuffle(QUESTIONS);show("play");render()}
+
+  function render(){
+    var item=order[st.i];st.locked=false;
+    $("qno").textContent="Question "+(st.i+1)+" of "+order.length;
+    $("q").textContent=item.q;$("code").textContent=item.code;
+    $("fb").hidden=true;$("next").hidden=true;
+    var opts=shuffle(item.o.map(function(t,k){return{t:t,ok:k===item.a}}));
+    var box=$("opts");box.innerHTML="";
+    opts.forEach(function(op,k){
+      var b=document.createElement("button");b.type="button";b.className="opt";
+      var key=document.createElement("kbd");key.textContent=k+1;
+      var c=document.createElement("code");c.textContent=op.t;
+      b.appendChild(key);b.appendChild(c);b.dataset.ok=op.ok?"1":"0";
+      b.addEventListener("click",function(){answer(b)});box.appendChild(b);
+    });
+    hud();startTimer();
+  }
+
+  function startTimer(){
+    clearInterval(timer);left=TIME;$("time").style.width="100%";
+    timer=setInterval(function(){
+      left-=0.1;$("time").style.width=Math.max(left/TIME*100,0)+"%";
+      if(left<=0){clearInterval(timer);answer(null)}
+    },100);
+  }
+
+  function answer(btn){
+    if(st.locked)return;st.locked=true;clearInterval(timer);
+    var item=order[st.i],good=btn&&btn.dataset.ok==="1";
+    Array.prototype.forEach.call($("opts").children,function(b){
+      b.disabled=true;if(b.dataset.ok==="1")b.classList.add("right");
+    });
+    var head;
+    if(good){st.streak++;var bonus=Math.round(left);st.score+=10+bonus+(st.streak>=3?5:0);
+      head="Correct! +"+(10+bonus)+(st.streak>=3?" (streak bonus +5)":"");
+    }else{if(btn)btn.classList.add("wrong");st.streak=0;st.lives--;head=btn?"Not quite.":"Time is up.";}
+    var fb=$("fb");fb.innerHTML="";var h=document.createElement("b");h.textContent=head;
+    fb.appendChild(h);fb.appendChild(document.createTextNode(item.e));fb.hidden=false;
+    st.i++;hud();
+    var nx=$("next");nx.hidden=false;
+    nx.textContent=(st.lives<=0||st.i>=order.length)?"See results":"Next question";
+    nx.focus();
+  }
+
+  function finish(){
+    clearInterval(timer);show("end");
+    var won=st.lives>0,isBest=st.score>best();
+    if(isBest)saveBest(st.score);
+    $("endicon").textContent=won?"🏆":"💥";
+    $("endtitle").textContent=won?"You finished the loop!":"Out of lives";
+    $("endtxt").textContent="Score "+st.score+". You answered "+Math.min(st.i,order.length)+" of "+order.length+" questions."+(isBest?" New best score!":"");
+  }
+
+  $("go").addEventListener("click",start);
+  $("again").addEventListener("click",function(){updateBest();start()});
+  $("next").addEventListener("click",function(){if(st.lives<=0||st.i>=order.length)finish();else render()});
+  document.addEventListener("keydown",function(e){
+    if($("play").hidden||st.locked)return;
+    var n=parseInt(e.key,10);if(n>=1&&n<=4){var b=$("opts").children[n-1];if(b)answer(b)}
+  });
+  function updateBest(){var b=best();$("best").textContent=b?"Your best score: "+b:""}
+  updateBest();
+})();
+</script>
+</body>
+</html>
