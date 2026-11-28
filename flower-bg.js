@@ -2,6 +2,8 @@
  * flower-bg.js — adds the 3D crystalline flower animation to a page.
  *   1. Background: a fixed, translucent flower behind all page content (every page).
  *   2. Hero panel: the full neon version on a black canvas (home page only).
+ *   3. Cursor interaction: moving the cursor rotates both flowers the same way.
+ *      Tune SENSITIVITY and SMOOTHING near the top of the file.
  * Usage: <script src="flower-bg.js" defer></script> before </body>.
  * Optional: put <div id="flower-hero"></div> where you want the hero panel.
  */
@@ -10,6 +12,12 @@
 
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // Cursor-driven rotation, shared by every flower on the page.
+  // tx/ty = target angles (set by pointer movement), x/y = smoothed angles actually drawn.
+  var rot = { tx: 0, ty: 0, x: 0, y: 0 };
+  var SENSITIVITY = 0.008; // radians of rotation per pixel of cursor movement
+  var SMOOTHING = 0.1;     // 0..1, lower = floatier / more inertia
+
   function project(x, y, z, rx, ry, rz, fov, scale, w, h) {
     var y1 = y * Math.cos(rx) - z * Math.sin(rx);
     var z1 = y * Math.sin(rx) + z * Math.cos(rx);
@@ -17,8 +25,15 @@
     var z2 = -x * Math.sin(ry) + z1 * Math.cos(ry);
     var x3 = x2 * Math.cos(rz) - y1 * Math.sin(rz);
     var y3 = x2 * Math.sin(rz) + y1 * Math.cos(rz);
-    var p = fov / (fov + z2 + 360);
-    return { x: w / 2 + x3 * p * scale, y: h / 2 + y3 * p * scale };
+
+    // Cursor rotation, applied in screen space so it always follows the pointer's direction
+    var x4 = x3 * Math.cos(rot.y) + z2 * Math.sin(rot.y);
+    var z4 = -x3 * Math.sin(rot.y) + z2 * Math.cos(rot.y);
+    var y5 = y3 * Math.cos(rot.x) - z4 * Math.sin(rot.x);
+    var z5 = y3 * Math.sin(rot.x) + z4 * Math.cos(rot.x);
+
+    var p = fov / (fov + z5 + 360);
+    return { x: w / 2 + x4 * p * scale, y: h / 2 + y5 * p * scale };
   }
 
   function layerPoints(l, total, t) {
@@ -188,6 +203,28 @@
         var r = mount.getBoundingClientRect();
         return { w: r.width, h: r.height };
       }, 'hero');
+    }
+
+    // ---------- 3. Cursor interaction ----------
+    // Move the cursor (or drag a finger) and the flower turns the same way:
+    // right -> front turns right, down -> front turns down, and so on.
+    if (!reduceMotion) {
+      var last = null;
+      window.addEventListener('pointermove', function (e) {
+        if (last) {
+          rot.ty -= (e.clientX - last.x) * SENSITIVITY;
+          rot.tx += (e.clientY - last.y) * SENSITIVITY;
+        }
+        last = { x: e.clientX, y: e.clientY };
+      }, { passive: true });
+      document.addEventListener('pointerleave', function () { last = null; });
+      window.addEventListener('blur', function () { last = null; });
+
+      (function smooth() {
+        rot.x += (rot.tx - rot.x) * SMOOTHING;
+        rot.y += (rot.ty - rot.y) * SMOOTHING;
+        requestAnimationFrame(smooth);
+      })();
     }
 
     var timer;
